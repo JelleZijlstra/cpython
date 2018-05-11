@@ -38,6 +38,8 @@ typedef struct _alias *alias_ty;
 
 typedef struct _withitem *withitem_ty;
 
+typedef struct _case_item *case_item_ty;
+
 
 enum _mod_kind {Module_kind=1, Interactive_kind=2, Expression_kind=3,
                  Suite_kind=4};
@@ -68,10 +70,10 @@ enum _stmt_kind {FunctionDef_kind=1, AsyncFunctionDef_kind=2, ClassDef_kind=3,
                   Return_kind=4, Delete_kind=5, Assign_kind=6,
                   AugAssign_kind=7, AnnAssign_kind=8, For_kind=9,
                   AsyncFor_kind=10, While_kind=11, If_kind=12, With_kind=13,
-                  AsyncWith_kind=14, Raise_kind=15, Try_kind=16,
-                  Assert_kind=17, Import_kind=18, ImportFrom_kind=19,
-                  Global_kind=20, Nonlocal_kind=21, Expr_kind=22, Pass_kind=23,
-                  Break_kind=24, Continue_kind=25};
+                  AsyncWith_kind=14, Match_kind=15, Raise_kind=16, Try_kind=17,
+                  Assert_kind=18, Import_kind=19, ImportFrom_kind=20,
+                  Global_kind=21, Nonlocal_kind=22, Expr_kind=23, Pass_kind=24,
+                  Break_kind=25, Continue_kind=26};
 struct _stmt {
     enum _stmt_kind kind;
     union {
@@ -165,6 +167,11 @@ struct _stmt {
         } AsyncWith;
 
         struct {
+            expr_ty test;
+            asdl_seq *body;
+        } Match;
+
+        struct {
             expr_ty exc;
             expr_ty cause;
         } Raise;
@@ -215,8 +222,8 @@ enum _expr_kind {BoolOp_kind=1, BinOp_kind=2, UnaryOp_kind=3, Lambda_kind=4,
                   Compare_kind=15, Call_kind=16, Num_kind=17, Str_kind=18,
                   FormattedValue_kind=19, JoinedStr_kind=20, Bytes_kind=21,
                   NameConstant_kind=22, Ellipsis_kind=23, Constant_kind=24,
-                  Attribute_kind=25, Subscript_kind=26, Starred_kind=27,
-                  Name_kind=28, List_kind=29, Tuple_kind=30};
+                  AtAssignment_kind=25, Attribute_kind=26, Subscript_kind=27,
+                  Starred_kind=28, Name_kind=29, List_kind=30, Tuple_kind=31};
 struct _expr {
     enum _expr_kind kind;
     union {
@@ -332,6 +339,10 @@ struct _expr {
         } Constant;
 
         struct {
+            identifier id;
+        } AtAssignment;
+
+        struct {
             expr_ty value;
             identifier attr;
             expr_context_ty ctx;
@@ -442,6 +453,24 @@ struct _withitem {
     expr_ty optional_vars;
 };
 
+enum _case_item_kind {Case_kind=1, Else_kind=2};
+struct _case_item {
+    enum _case_item_kind kind;
+    union {
+        struct {
+            expr_ty match_expr;
+            asdl_seq *body;
+        } Case;
+
+        struct {
+            asdl_seq *body;
+        } Else;
+
+    } v;
+    int lineno;
+    int col_offset;
+};
+
 
 #define Module(a0, a1, a2) _Py_Module(a0, a1, a2)
 mod_ty _Py_Module(asdl_seq * body, string docstring, PyArena *arena);
@@ -496,6 +525,9 @@ stmt_ty _Py_With(asdl_seq * items, asdl_seq * body, int lineno, int col_offset,
 #define AsyncWith(a0, a1, a2, a3, a4) _Py_AsyncWith(a0, a1, a2, a3, a4)
 stmt_ty _Py_AsyncWith(asdl_seq * items, asdl_seq * body, int lineno, int
                       col_offset, PyArena *arena);
+#define Match(a0, a1, a2, a3, a4) _Py_Match(a0, a1, a2, a3, a4)
+stmt_ty _Py_Match(expr_ty test, asdl_seq * body, int lineno, int col_offset,
+                  PyArena *arena);
 #define Raise(a0, a1, a2, a3, a4) _Py_Raise(a0, a1, a2, a3, a4)
 stmt_ty _Py_Raise(expr_ty exc, expr_ty cause, int lineno, int col_offset,
                   PyArena *arena);
@@ -591,6 +623,9 @@ expr_ty _Py_Ellipsis(int lineno, int col_offset, PyArena *arena);
 #define Constant(a0, a1, a2, a3) _Py_Constant(a0, a1, a2, a3)
 expr_ty _Py_Constant(constant value, int lineno, int col_offset, PyArena
                      *arena);
+#define AtAssignment(a0, a1, a2, a3) _Py_AtAssignment(a0, a1, a2, a3)
+expr_ty _Py_AtAssignment(identifier id, int lineno, int col_offset, PyArena
+                         *arena);
 #define Attribute(a0, a1, a2, a3, a4, a5) _Py_Attribute(a0, a1, a2, a3, a4, a5)
 expr_ty _Py_Attribute(expr_ty value, identifier attr, expr_context_ty ctx, int
                       lineno, int col_offset, PyArena *arena);
@@ -636,6 +671,12 @@ alias_ty _Py_alias(identifier name, identifier asname, PyArena *arena);
 #define withitem(a0, a1, a2) _Py_withitem(a0, a1, a2)
 withitem_ty _Py_withitem(expr_ty context_expr, expr_ty optional_vars, PyArena
                          *arena);
+#define Case(a0, a1, a2, a3, a4) _Py_Case(a0, a1, a2, a3, a4)
+case_item_ty _Py_Case(expr_ty match_expr, asdl_seq * body, int lineno, int
+                      col_offset, PyArena *arena);
+#define Else(a0, a1, a2, a3) _Py_Else(a0, a1, a2, a3)
+case_item_ty _Py_Else(asdl_seq * body, int lineno, int col_offset, PyArena
+                      *arena);
 
 PyObject* PyAST_mod2obj(mod_ty t);
 mod_ty PyAST_obj2mod(PyObject* ast, PyArena* arena, int mode);

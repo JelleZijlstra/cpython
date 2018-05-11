@@ -452,6 +452,30 @@ validate_stmt(stmt_ty stmt)
                 return 0;
         }
         return validate_body(stmt->v.AsyncWith.body, "AsyncWith", 0);
+    case Match_kind:
+        if (!validate_expr(stmt->v.Match.test, Load)) {
+            return 0;
+        }
+        for (i = 0; i < asdl_seq_LEN(stmt->v.Match.body); i++) {
+            case_item_ty case_item = asdl_seq_GET(stmt->v.Match.body, i);
+            switch(case_item->kind) {
+            case Case_kind:
+                if (!validate_expr(case_item->v.Case.match_expr, Load) ||
+                    !validate_body(case_item->v.Case.body, "Match", 0)) {
+                    return 0;
+                }
+                break;
+            case Else_kind:
+                if (!validate_body(case_item->v.Else.body, "Match", 0)) {
+                    return 0;
+                }
+                break;
+            default:
+                PyErr_SetString(PyExc_SystemError, "unexpected match case");
+                return 0;
+            }
+        }
+        return 1;
     case Raise_kind:
         if (stmt->v.Raise.exc) {
             return validate_expr(stmt->v.Raise.exc, Load) &&
@@ -602,6 +626,7 @@ static expr_ty ast_for_expr(struct compiling *, const node *);
 static stmt_ty ast_for_stmt(struct compiling *, const node *);
 static asdl_seq *ast_for_body(struct compiling *c, const node *n,
                               string *docstring);
+static asdl_seq *ast_for_match_suite(struct compiling *c, const node *n);
 static string docstring_from_stmts(asdl_seq *stmts);
 static asdl_seq *ast_for_exprlist(struct compiling *, const node *,
                                   expr_context_ty);
@@ -758,6 +783,14 @@ num_stmts(const node *n)
                     l += num_stmts(CHILD(n, i));
                 return l;
             }
+        case match_suite:
+            l = 0;
+            for (i = 3; i < (NCH(n) - 1); i++) {
+                l += num_stmts(CHILD(n, i));
+            }
+            return l;
+        case case_item:
+            return num_stmts(CHILD(n, NCH(n) - 1));
         default: {
             char buf[128];
 
@@ -1669,6 +1702,24 @@ ast_for_async_stmt(struct compiling *c, const node *n)
 }
 
 static stmt_ty
+ast_for_match(struct compiling *c, const node *n)
+{
+    /* match_stmt: 'match' test ':' match_suite */
+    expr_ty test_expr;
+    asdl_seq *body;
+
+    REQ(n, match_stmt);
+    REQ(CHILD(n, 0), NAME);
+    assert(strcmp(STR(CHILD(n, 0)), "match") == 0);
+    test_expr = ast_for_expr(c, CHILD(n, 1));
+    if (!test_expr) {
+        return NULL;
+    }
+    body = ast_for_match_suite(c, CHILD(n, 3));
+    return Match(test_expr, body, LINENO(n), n->n_col_offset, c->c_arena);
+}
+
+static stmt_ty
 ast_for_decorated(struct compiling *c, const node *n)
 {
     /* decorated: decorators (classdef | funcdef | async_funcdef) */
@@ -2233,6 +2284,15 @@ ast_for_atom(struct compiling *c, const node *n)
             return res;
         }
     }
+    case DOUBLEAT:
+        REQ(NCH(n), 2);
+        PyObject *name;
+        const char *s = STR(CHILD(n, 1));
+        name = new_identifier(s, c);
+        if (!name) {
+            return NULL;
+        }
+        return AtAssignment(name, LINENO(n), n->n_col_offset, c->c_arena);
     default:
         PyErr_Format(PyExc_SystemError, "unhandled atom %d", TYPE(ch));
         return NULL;
@@ -3528,6 +3588,51 @@ ast_for_suite(struct compiling *c, const node *n)
     return seq;
 }
 
+static asdl_seq *
+ast_for_match_suite(struct compiling *c, const node *n)
+{
+    /* match_suite: NEWLINE INDENT case_item+ DEDENT */
+    asdl_seq *seq;
+    int total, i;
+    node *item;
+    case_item_ty ci;
+    expr_ty me;
+    asdl_seq *body;
+
+    REQ(n, match_suite);
+
+    total = NCH(n) - 3;
+    seq = _Py_asdl_seq_new(total, c->c_arena);
+    if (!seq) {
+        return NULL;
+    }
+    for (i = 2; i < (NCH(n) - 1); i++) {
+        item = CHILD(n, i);
+        REQ(CHILD(item, 0), NAME);
+        if (NCH(item) == 4) {
+            assert(strcmp(STR(CHILD(item, 0)), "case") == 0);
+            me = ast_for_expr(c, CHILD(item, 1));
+            if (!me) {
+                return NULL;
+            }
+            body = ast_for_suite(c, CHILD(item, 3));
+            if (!body) {
+                return NULL;
+            }
+            ci = Case(me, body, LINENO(item), item->n_col_offset, c->c_arena);
+        } else {
+            assert(strcmp(STR(CHILD(item, 0)), "else") == 0);
+            body = ast_for_suite(c, CHILD(item, 2));
+            if (!body) {
+                return NULL;
+            }
+            ci = Else(body, LINENO(item), item->n_col_offset, c->c_arena);
+        }
+        asdl_seq_SET(seq, i - 2, ci);
+    }
+    return seq;
+}
+
 static string
 docstring_from_stmts(asdl_seq *stmts)
 {
@@ -4061,9 +4166,11 @@ ast_for_stmt(struct compiling *c, const node *n)
                 return ast_for_decorated(c, ch);
             case async_stmt:
                 return ast_for_async_stmt(c, ch);
+            case match_stmt:
+                return ast_for_match(c, ch);
             default:
                 PyErr_Format(PyExc_SystemError,
-                             "unhandled small_stmt: TYPE=%d NCH=%d\n",
+                             "unhandled stmt: TYPE=%d NCH=%d\n",
                              TYPE(n), NCH(n));
                 return NULL;
         }

@@ -175,6 +175,7 @@ static int compiler_addop_i(struct compiler *, int, Py_ssize_t);
 static int compiler_addop_j(struct compiler *, int, basicblock *, int);
 static int compiler_error(struct compiler *, const char *);
 static int compiler_nameop(struct compiler *, identifier, expr_context_ty);
+static int compiler_atassignment(struct compiler *, identifier);
 
 static PyCodeObject *compiler_mod(struct compiler *, mod_ty);
 static int compiler_visit_stmt(struct compiler *, stmt_ty);
@@ -1464,6 +1465,22 @@ find_ann(asdl_seq *stmts)
         case AsyncWith_kind:
             res = find_ann(st->v.AsyncWith.body);
             break;
+        case Match_kind:
+            for (j = 0; j < asdl_seq_LEN(st->v.Match.body); j++) {
+                case_item_ty case_item = asdl_seq_GET(st->v.Match.body, j);
+                switch(case_item->kind) {
+                case Case_kind:
+                    if (!find_ann(case_item->v.Case.body)) {
+                        return 1;
+                    }
+                    break;
+                case Else_kind:
+                    if (!find_ann(case_item->v.Else.body)) {
+                        return 1;
+                    }
+                    break;
+                }
+            }
         case Try_kind:
             for (j = 0; j < asdl_seq_LEN(st->v.Try.handlers); j++) {
                 excepthandler_ty handler = (excepthandler_ty)asdl_seq_GET(
@@ -2545,6 +2562,13 @@ compiler_while(struct compiler *c, stmt_ty s)
 }
 
 static int
+compiler_match(struct compiler *c, stmt_ty s)
+{
+    // TODO
+    return 1;
+}
+
+static int
 compiler_return(struct compiler *c, stmt_ty s)
 {
     int preserve_tos = ((s->v.Return.value != NULL) &&
@@ -3082,6 +3106,8 @@ compiler_visit_stmt(struct compiler *c, stmt_ty s)
         return compiler_for(c, s);
     case While_kind:
         return compiler_while(c, s);
+    case Match_kind:
+        return compiler_match(c, s);
     case If_kind:
         return compiler_if(c, s);
     case Raise_kind:
@@ -3219,6 +3245,13 @@ inplace_binop(struct compiler *c, operator_ty op)
             "inplace binary op %d should not be possible", op);
         return 0;
     }
+}
+
+static int
+compiler_atassignment(struct compiler *c, identifier name)
+{
+    // TODO
+    return 1;
 }
 
 static int
@@ -4586,6 +4619,8 @@ compiler_visit_expr(struct compiler *c, expr_ty e)
         break;
     case Name_kind:
         return compiler_nameop(c, e->v.Name.id, e->v.Name.ctx);
+    case AtAssignment_kind:
+        return compiler_atassignment(c, e->v.AtAssignment.id);
     /* child nodes of List and Tuple will have expr_context set */
     case List_kind:
         return compiler_list(c, e);

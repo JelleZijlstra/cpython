@@ -41,6 +41,7 @@ module Python
           | If(expr test, stmt* body, stmt* orelse)
           | With(withitem* items, stmt* body)
           | AsyncWith(withitem* items, stmt* body)
+          | Match(expr test, case_item* body)
 
           | Raise(expr? exc, expr? cause)
           | Try(stmt* body, excepthandler* handlers, stmt* orelse, stmt* finalbody)
@@ -86,6 +87,7 @@ module Python
          | NameConstant(singleton value)
          | Ellipsis
          | Constant(constant value)
+         | AtAssignment(identifier id)
 
          -- the following expression can appear in assignment context
          | Attribute(expr value, identifier attr, expr_context ctx)
@@ -131,5 +133,8 @@ module Python
     alias = (identifier name, identifier? asname)
 
     withitem = (expr context_expr, expr? optional_vars)
-}
 
+    case_item = Case(expr match_expr, stmt* body)
+              | Else(stmt* body)
+              attributes (int lineno, int col_offset)
+}

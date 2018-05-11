@@ -102,6 +102,7 @@ const char *_PyParser_TokenNames[] = {
     "DOUBLESLASHEQUAL",
     "AT",
     "ATEQUAL",
+    "DOUBLEAT",
     "RARROW",
     "ELLIPSIS",
     /* This table must match the #defines in token.h! */
@@ -1216,6 +1217,7 @@ PyToken_TwoChars(int c1, int c2)
     case '@':
         switch (c2) {
         case '=':               return ATEQUAL;
+        case '@':               return DOUBLEAT;
         }
         break;
     }

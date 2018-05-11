@@ -188,6 +188,7 @@ static int symtable_visit_setcomp(struct symtable *st, expr_ty s);
 static int symtable_visit_dictcomp(struct symtable *st, expr_ty s);
 static int symtable_visit_arguments(struct symtable *st, arguments_ty);
 static int symtable_visit_excepthandler(struct symtable *st, excepthandler_ty);
+static int symtable_visit_case_item(struct symtable *st, case_item_ty);
 static int symtable_visit_alias(struct symtable *st, alias_ty);
 static int symtable_visit_comprehension(struct symtable *st, comprehension_ty);
 static int symtable_visit_keyword(struct symtable *st, keyword_ty);
@@ -1219,6 +1220,10 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
         if (s->v.While.orelse)
             VISIT_SEQ(st, stmt, s->v.While.orelse);
         break;
+    case Match_kind:
+        VISIT(st, expr, s->v.Match.test);
+        VISIT_SEQ(st, case_item, s->v.Match.body);
+        break;
     case If_kind:
         /* XXX if 0: and lookup_yield() hacks */
         VISIT(st, expr, s->v.If.test);
@@ -1492,6 +1497,10 @@ symtable_visit_expr(struct symtable *st, expr_ty e)
                 VISIT_QUIT(st, 0);
         }
         break;
+    case AtAssignment_kind:
+        if (!symtable_add_def(st, e->v.AtAssignment.id, DEF_LOCAL))
+            VISIT_QUIT(st, 0);
+        break;
     /* child nodes of List and Tuple will have expr_context set */
     case List_kind:
         VISIT_SEQ(st, expr, e->v.List.elts);
@@ -1601,6 +1610,21 @@ symtable_visit_excepthandler(struct symtable *st, excepthandler_ty eh)
         if (!symtable_add_def(st, eh->v.ExceptHandler.name, DEF_LOCAL))
             return 0;
     VISIT_SEQ(st, stmt, eh->v.ExceptHandler.body);
+    return 1;
+}
+
+static int
+symtable_visit_case_item(struct symtable *st, case_item_ty c)
+{
+    switch(c->kind) {
+    case Case_kind:
+        VISIT(st, expr, c->v.Case.match_expr);
+        VISIT_SEQ(st, stmt, c->v.Case.body);
+        break;
+    case Else_kind:
+        VISIT_SEQ(st, stmt, c->v.Else.body);
+        break;
+    }
     return 1;
 }
 
