@@ -175,7 +175,6 @@ static int compiler_addop_i(struct compiler *, int, Py_ssize_t);
 static int compiler_addop_j(struct compiler *, int, basicblock *, int);
 static int compiler_error(struct compiler *, const char *);
 static int compiler_nameop(struct compiler *, identifier, expr_context_ty);
-static int compiler_atassignment(struct compiler *, identifier);
 
 static PyCodeObject *compiler_mod(struct compiler *, mod_ty);
 static int compiler_visit_stmt(struct compiler *, stmt_ty);
@@ -2562,9 +2561,81 @@ compiler_while(struct compiler *c, stmt_ty s)
 }
 
 static int
+compiler_match_expr(struct compiler *c, expr_ty e, basicblock *next)
+{
+    PyObject *str;
+    switch (e->kind) {
+    case AtAssignment_kind:
+        return compiler_nameop(c, e->v.AtAssignment.id, Store);
+    case Call_kind:
+        ADDOP(c, DUP_TOP);
+        if (!compiler_visit_expr(c, e->v.Call.func)) {
+            return 0;
+        }
+        str = PyUnicode_InternFromString("__match__");
+        ADDOP_NAME(c, LOAD_ATTR, str, names);
+        ADDOP(c, ROT_TWO);
+        if(!compiler_call_helper(c, 1,
+                                 e->v.Call.args,
+                                 e->v.Call.keywords)) {
+            return 0;
+        }
+        ADDOP_JABS(c, POP_JUMP_IF_FALSE, next);
+        break;
+    default:
+        ADDOP(c, DUP_TOP);
+        if (!compiler_visit_expr(c, e)) {
+            return 0;
+        }
+        ADDOP_I(c, COMPARE_OP, PyCmp_EQ);
+        ADDOP_JABS(c, POP_JUMP_IF_FALSE, next);
+        break;
+    }
+    return 1;
+}
+
+static int
 compiler_match(struct compiler *c, stmt_ty s)
 {
-    // TODO
+    basicblock *end, *next, *body;
+    int i, seen_else = 0;
+    assert(s->kind == Match_kind);
+    end = compiler_new_block(c);
+    if (end == NULL) {
+        return 0;
+    }
+
+    if (!compiler_visit_expr(c, s->v.Match.test)) {
+        return 0;
+    }
+
+    for (i = 0; i < asdl_seq_LEN(s->v.Match.body); i++) {
+        if (seen_else) {
+            return compiler_error(
+                c, "'else' is not last item in match statement");
+        }
+        case_item_ty ci = (case_item_ty)asdl_seq_GET(s->v.Match.body, i);
+        switch (ci->kind) {
+        case Case_kind:
+            next = compiler_new_block(c);
+            if (next == NULL) {
+                return 0;
+            }
+            if (!compiler_match_expr(c, ci->v.Case.match_expr, next)) {
+                return 0;
+            }
+            VISIT_SEQ(c, stmt, ci->v.Case.body);
+            ADDOP_JREL(c, JUMP_FORWARD, end);
+            compiler_use_next_block(c, next);
+            break;
+        case Else_kind:
+            seen_else = 1;
+            VISIT_SEQ(c, stmt, ci->v.Else.body);
+            break;
+        }
+    }
+    compiler_use_next_block(c, end);
+    ADDOP(c, POP_TOP);
     return 1;
 }
 
@@ -3245,13 +3316,6 @@ inplace_binop(struct compiler *c, operator_ty op)
             "inplace binary op %d should not be possible", op);
         return 0;
     }
-}
-
-static int
-compiler_atassignment(struct compiler *c, identifier name)
-{
-    // TODO
-    return 1;
 }
 
 static int
@@ -4620,7 +4684,8 @@ compiler_visit_expr(struct compiler *c, expr_ty e)
     case Name_kind:
         return compiler_nameop(c, e->v.Name.id, e->v.Name.ctx);
     case AtAssignment_kind:
-        return compiler_atassignment(c, e->v.AtAssignment.id);
+        return compiler_error(c,
+            "cannot use @@ assignment outside match statement");
     /* child nodes of List and Tuple will have expr_context set */
     case List_kind:
         return compiler_list(c, e);
