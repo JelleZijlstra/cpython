@@ -2582,6 +2582,10 @@ compiler_match_expr(struct compiler *c, expr_ty e, basicblock *next)
         }
         ADDOP_JABS(c, POP_JUMP_IF_FALSE, next);
         break;
+    case List_kind:
+    case Tuple_kind:
+    case Dict_kind:
+        // TODO make those work
     default:
         ADDOP(c, DUP_TOP);
         if (!compiler_visit_expr(c, e)) {
