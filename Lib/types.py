@@ -2,6 +2,10 @@
 Define names for built-in types that aren't directly accessible as a builtin.
 """
 import sys
+try:
+    from _types import Buffer
+except ModuleNotFoundError:
+    pass  # Not available during bootstrap.
 
 # Iterators in Python aren't a matter of type but of protocol.  A large
 # and changing number of builtin types implement *some* flavor of

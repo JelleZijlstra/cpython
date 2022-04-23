@@ -1,11 +1,13 @@
 # Python test set -- part 6, built-in types
 
-from test.support import run_with_locale, cpython_only
+from test.support import run_with_locale, cpython_only, check_disallow_instantiation
+import array
 import collections.abc
 from collections import namedtuple
 import copy
 import gc
 import inspect
+import mmap
 import pickle
 import locale
 import sys
@@ -2107,6 +2109,48 @@ class CoroutineTests(unittest.TestCase):
             '__await__', '__iter__', '__next__', 'cr_code', 'cr_running',
             'cr_frame', 'gi_code', 'gi_frame', 'gi_running', 'send',
             'close', 'throw'}))
+
+
+STDLIB_BUFFERS = [
+    bytes,
+    bytearray,
+    memoryview,
+    array.array,
+    mmap.mmap,
+]
+
+class BufferTests(unittest.TestCase):
+    def test_issubclass(self):
+        for typ in STDLIB_BUFFERS:
+            with self.subTest(typ=typ):
+                self.assertTrue(issubclass(typ, types.Buffer))
+
+        self.assertFalse(issubclass(str, types.Buffer))
+        self.assertFalse(issubclass(object, types.Buffer))
+
+        self.assertRaises(TypeError, issubclass, None, types.Buffer)
+        self.assertRaises(TypeError, issubclass, b'', types.Buffer)
+
+    def test_isinstance(self):
+        self.assertTrue(isinstance(b'', types.Buffer))
+        self.assertTrue(isinstance(bytearray(b''), types.Buffer))
+        self.assertTrue(isinstance(memoryview(b''), types.Buffer))
+
+        self.assertFalse(isinstance('', types.Buffer))
+        self.assertFalse(isinstance(object, types.Buffer))
+        self.assertFalse(isinstance(bytes, types.Buffer))
+
+    def test_disallowed_operations(self):
+        check_disallow_instantiation(self, types.Buffer)
+        check_disallow_instantiation(self, type(types.Buffer))
+
+        with self.assertRaises(TypeError):
+            class MyBuffer(types.Buffer):
+                pass
+
+        with self.assertRaises(TypeError):
+            class MyMetaBuffer(metaclass=type(types.Buffer)):
+                pass
 
 
 if __name__ == '__main__':

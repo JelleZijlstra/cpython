@@ -960,6 +960,7 @@ class PyBuildExt(build_ext):
         self.addext(Extension("_queue", ["_queuemodule.c"]))
         self.addext(Extension("_statistics", ["_statisticsmodule.c"]))
         self.addext(Extension("_struct", ["_struct.c"]))
+        self.addext(Extension("_types", ["_typesmodule.c"]))
         self.addext(Extension("_typing", ["_typingmodule.c"]))
 
         # Modules with some UNIX dependencies -- on by default:
