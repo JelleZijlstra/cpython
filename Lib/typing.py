@@ -250,16 +250,27 @@ def _collect_parameters(args):
         _collect_parameters((T, Callable[P, T])) == (T, P)
     """
     parameters = []
+    seen_default = False
     for t in args:
         # We don't want __parameters__ descriptor of a bare Python class.
         if isinstance(t, type):
             continue
         if hasattr(t, '__typing_subst__'):
             if t not in parameters:
+                if t.__default__ is not None:
+                    seen_default = True
+                elif seen_default:
+                    raise TypeError("TypeVarLike without a default follows one with a default")
+
                 parameters.append(t)
         else:
             for x in getattr(t, '__parameters__', ()):
                 if x not in parameters:
+                    if x.__default__ is not None:
+                        seen_default = True
+                    elif seen_default:
+                        raise TypeError("TypeVarLike without a default follows one with a default")
+
                     parameters.append(x)
     return tuple(parameters)
 
@@ -956,7 +967,24 @@ class _BoundVarianceMixin:
         raise TypeError(f"Cannot subclass an instance of {type(self).__name__}")
 
 
-class TypeVar(_Final, _Immutable, _BoundVarianceMixin, _PickleUsingNameMixin,
+_marker = object()
+
+
+class _DefaultMixin:
+    """Mixin for TypeVarLike defaults."""
+
+    def __init__(self, default):
+        if isinstance(default, (tuple, list)):
+            self.__default__ = default.__class__(
+                (_type_check(d, "Defaults must all be types") for d in default)
+            )
+        elif default != _marker:
+            self.__default__ = _type_check(default, "Default must be a type")
+        else:
+            self.__default__ = None
+
+
+class TypeVar(_Final, _Immutable, _BoundVarianceMixin, _PickleUsingNameMixin, _DefaultMixin,
               _root=True):
     """Type variable.
 
@@ -1001,10 +1029,11 @@ class TypeVar(_Final, _Immutable, _BoundVarianceMixin, _PickleUsingNameMixin,
     Note that only type variables defined in global scope can be pickled.
     """
 
-    def __init__(self, name, *constraints, bound=None,
+    def __init__(self, name, *constraints, bound=None, default=_marker,
                  covariant=False, contravariant=False):
         self.__name__ = name
         super().__init__(bound, covariant, contravariant)
+        _DefaultMixin.__init__(self, default)
         if constraints and bound is not None:
             raise TypeError("Constraints cannot be combined with bound=...")
         if constraints and len(constraints) == 1:
@@ -1024,7 +1053,7 @@ class TypeVar(_Final, _Immutable, _BoundVarianceMixin, _PickleUsingNameMixin,
         return arg
 
 
-class TypeVarTuple(_Final, _Immutable, _PickleUsingNameMixin, _root=True):
+class TypeVarTuple(_Final, _Immutable, _PickleUsingNameMixin, _DefaultMixin, _root=True):
     """Type variable tuple.
 
     Usage:
@@ -1049,8 +1078,9 @@ class TypeVarTuple(_Final, _Immutable, _PickleUsingNameMixin, _root=True):
     Note that only TypeVarTuples defined in global scope can be pickled.
     """
 
-    def __init__(self, name):
+    def __init__(self, name, *, default=_marker):
         self.__name__ = name
+        _DefaultMixin.__init__(self, default)
 
         # Used for pickling.
         def_mod = _caller()
@@ -1160,7 +1190,7 @@ class ParamSpecKwargs(_Final, _Immutable, _root=True):
         raise TypeError(f"Cannot subclass an instance of {type(self).__name__}")
 
 
-class ParamSpec(_Final, _Immutable, _BoundVarianceMixin, _PickleUsingNameMixin,
+class ParamSpec(_Final, _Immutable, _BoundVarianceMixin, _PickleUsingNameMixin, _DefaultMixin,
                 _root=True):
     """Parameter specification variable.
 
@@ -1215,9 +1245,10 @@ class ParamSpec(_Final, _Immutable, _BoundVarianceMixin, _PickleUsingNameMixin,
     def kwargs(self):
         return ParamSpecKwargs(self)
 
-    def __init__(self, name, *, bound=None, covariant=False, contravariant=False):
+    def __init__(self, name, *, bound=None, default=None, covariant=False, contravariant=False):
         self.__name__ = name
         super().__init__(bound, covariant, contravariant)
+        _DefaultMixin.__init__(self, default)
         def_mod = _caller()
         if def_mod != 'typing':
             self.__module__ = def_mod

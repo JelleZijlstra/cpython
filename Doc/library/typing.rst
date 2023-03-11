@@ -1292,6 +1292,22 @@ These are not used in annotations. They are building blocks for creating generic
 
        c = concatenate('one', b'two')  # error: type variable 'A' can be either str or bytes in a function call, but not both
 
+    If a generic type is commonly generic over just one type you can use
+    ``default`` to specify this type::
+
+        T = TypeVar("T", default=int)
+
+        class Box(Generic[T]):
+            def __init__(self, value: T | None = None):
+                self.value = value
+
+        reveal_type(Box())                      # type is Box[int]
+        reveal_type(Box(value="Hello World!"))  # type is Box[str]
+
+    A TypeVar without a default cannot follow a TypeVar with a default.
+
+    .. TODO add more about this
+
     At runtime, ``isinstance(x, T)`` will raise :exc:`TypeError`.  In general,
     :func:`isinstance` and :func:`issubclass` should not be used with types.
 
@@ -1395,6 +1411,8 @@ These are not used in annotations. They are building blocks for creating generic
 
     See :pep:`646` for more details on type variable tuples.
 
+    .. TODO docs on default
+
     .. versionadded:: 3.11
 
 .. data:: Unpack
@@ -1423,7 +1441,7 @@ These are not used in annotations. They are building blocks for creating generic
 
    .. versionadded:: 3.11
 
-.. class:: ParamSpec(name, *, bound=None, covariant=False, contravariant=False)
+.. class:: ParamSpec(name, *, bound=None, default=..., covariant=False, contravariant=False)
 
    Parameter specification variable.  A specialized version of
    :class:`type variables <TypeVar>`.
