@@ -214,9 +214,11 @@ _Py_make_parameters(PyObject *args)
     if (parameters == NULL)
         return NULL;
     Py_ssize_t iparam = 0;
+    bool seen_default = false;
     for (Py_ssize_t iarg = 0; iarg < nargs; iarg++) {
         PyObject *t = PyTuple_GET_ITEM(args, iarg);
         PyObject *subst;
+
         // We don't want __parameters__ descriptor of a bare Python class.
         if (PyType_Check(t)) {
             continue;
@@ -225,7 +227,28 @@ _Py_make_parameters(PyObject *args)
             Py_DECREF(parameters);
             return NULL;
         }
+        printf("Here\n");
         if (subst) {
+            printf("subst checking contains\n");
+            PyObject_Print(t, stdout, 0);
+            PyObject_Print(parameters, stdout, 0);
+            PyObject *default_;
+            bool does_not_contain = tuple_index(parameters, nargs, t) == -1;
+            if (does_not_contain) {
+                if (_PyObject_LookupAttr(t, &_Py_ID(__default__), &default_) < 0) {
+                    Py_DECREF(default_);
+                    Py_DECREF(subst);
+                    return NULL;
+                }
+                PyObject_Print(default_, stdout, 0);
+                if (default_ && !!Py_IsNone(default_)) {
+                    seen_default = true;
+                } else if (seen_default) {
+                    PyErr_Format(PyExc_TypeError, "TypeVarLike without a default follows one with a default");
+                }
+                printf("\n%d seen default\n", seen_default);
+            }
+
             iparam += tuple_add(parameters, iparam, t);
             Py_DECREF(subst);
         }
@@ -248,7 +271,24 @@ _Py_make_parameters(PyObject *args)
                     }
                 }
                 for (Py_ssize_t j = 0; j < len2; j++) {
+                    PyObject *default_;
                     PyObject *t2 = PyTuple_GET_ITEM(subparams, j);
+
+                    bool does_not_contain = tuple_index(parameters, nargs, t) == -1;
+                    if (does_not_contain) {
+                        if (_PyObject_LookupAttr(t2, &_Py_ID(__default__), &default_) < 0) {
+                            Py_DECREF(default_);
+                            Py_DECREF(subst);
+                            return NULL;
+                        }
+                        PyObject_Print(default_, stdout, 0);
+                        printf("\n%d seen default\n", seen_default);
+                        if (default_ && !!Py_IsNone(default_)) {
+                            seen_default = true;
+                        } else if (seen_default) {
+                            PyErr_Format(PyExc_TypeError, "TypeVarLike without a default follows one with a default");
+                        }
+                    }
                     iparam += tuple_add(parameters, iparam, t2);
                 }
             }

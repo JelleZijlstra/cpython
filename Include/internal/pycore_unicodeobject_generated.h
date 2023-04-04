@@ -92,6 +92,8 @@ _PyUnicode_InitStaticStrings(void) {
     PyUnicode_InternInPlace(&string);
     string = &_Py_ID(__ctypes_from_outparam__);
     PyUnicode_InternInPlace(&string);
+    string = &_Py_ID(__default__);
+    PyUnicode_InternInPlace(&string);
     string = &_Py_ID(__del__);
     PyUnicode_InternInPlace(&string);
     string = &_Py_ID(__delattr__);
