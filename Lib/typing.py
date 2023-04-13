@@ -260,7 +260,9 @@ def _collect_parameters(args):
                 if t.__default__ is not None:
                     seen_default = True
                 elif seen_default:
-                    raise TypeError("TypeVarLike without a default follows one with a default")
+                    raise TypeError(
+                        f"TypeVarLike {t!r} without a default follows one with a default"
+                    )
 
                 parameters.append(t)
         else:
@@ -269,7 +271,9 @@ def _collect_parameters(args):
                     if x.__default__ is not None:
                         seen_default = True
                     elif seen_default:
-                        raise TypeError("TypeVarLike without a default follows one with a default")
+                        raise TypeError(
+                            f"TypeVarLike {t!r} without a default follows one with a default"
+                        )
 
                     parameters.append(x)
     return tuple(parameters)

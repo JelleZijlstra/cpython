@@ -227,11 +227,7 @@ _Py_make_parameters(PyObject *args)
             Py_DECREF(parameters);
             return NULL;
         }
-        printf("Here\n");
         if (subst) {
-            printf("subst checking contains\n");
-            PyObject_Print(t, stdout, 0);
-            PyObject_Print(parameters, stdout, 0);
             PyObject *default_;
             bool does_not_contain = tuple_index(parameters, nargs, t) == -1;
             if (does_not_contain) {
@@ -240,13 +236,15 @@ _Py_make_parameters(PyObject *args)
                     Py_DECREF(subst);
                     return NULL;
                 }
-                PyObject_Print(default_, stdout, 0);
-                if (default_ && !!Py_IsNone(default_)) {
+                if (!Py_IsNone(default_)) {
                     seen_default = true;
                 } else if (seen_default) {
-                    PyErr_Format(PyExc_TypeError, "TypeVarLike without a default follows one with a default");
+                    return PyErr_Format(
+                        PyExc_TypeError,
+                        "type parameter %R without a default follows one with a default",
+                        t
+                    );
                 }
-                printf("\n%d seen default\n", seen_default);
             }
 
             iparam += tuple_add(parameters, iparam, t);
@@ -274,19 +272,21 @@ _Py_make_parameters(PyObject *args)
                     PyObject *default_;
                     PyObject *t2 = PyTuple_GET_ITEM(subparams, j);
 
-                    bool does_not_contain = tuple_index(parameters, nargs, t) == -1;
+                    bool does_not_contain = tuple_index(parameters, nargs, t2) == -1;
                     if (does_not_contain) {
                         if (_PyObject_LookupAttr(t2, &_Py_ID(__default__), &default_) < 0) {
                             Py_DECREF(default_);
                             Py_DECREF(subst);
                             return NULL;
                         }
-                        PyObject_Print(default_, stdout, 0);
-                        printf("\n%d seen default\n", seen_default);
-                        if (default_ && !!Py_IsNone(default_)) {
+                        if (default_ && !Py_IsNone(default_)) {
                             seen_default = true;
                         } else if (seen_default) {
-                            PyErr_Format(PyExc_TypeError, "TypeVarLike without a default follows one with a default");
+                            return PyErr_Format(
+                                PyExc_TypeError,
+                                "type parameter %R without a default follows one with a default",
+                                t2
+                            );
                         }
                     }
                     iparam += tuple_add(parameters, iparam, t2);

@@ -870,6 +870,8 @@ _PyUnicode_InitStaticStrings(void) {
     PyUnicode_InternInPlace(&string);
     string = &_Py_ID(last);
     PyUnicode_InternInPlace(&string);
+    string = &_Py_ID(last_exc);
+    PyUnicode_InternInPlace(&string);
     string = &_Py_ID(last_node);
     PyUnicode_InternInPlace(&string);
     string = &_Py_ID(last_traceback);
