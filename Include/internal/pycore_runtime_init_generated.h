@@ -772,8 +772,10 @@ extern "C" {
     INIT_ID(after_in_child), \
     INIT_ID(after_in_parent), \
     INIT_ID(aggregate_class), \
+    INIT_ID(alias), \
     INIT_ID(append), \
     INIT_ID(argdefs), \
+    INIT_ID(args), \
     INIT_ID(arguments), \
     INIT_ID(argv), \
     INIT_ID(as_integer_ratio), \
@@ -1068,6 +1070,7 @@ extern "C" {
     INIT_ID(optimize), \
     INIT_ID(options), \
     INIT_ID(order), \
+    INIT_ID(origin), \
     INIT_ID(out_fd), \
     INIT_ID(outgoing), \
     INIT_ID(overlapped), \
