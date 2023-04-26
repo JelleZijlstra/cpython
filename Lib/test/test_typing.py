@@ -53,7 +53,6 @@ c_typing = import_helper.import_fresh_module('typing', fresh=['_typing'])
 
 
 CANNOT_SUBCLASS_TYPE = 'Cannot subclass special typing classes'
-NOT_A_BASE_TYPE = "type 'typing.%s' is not an acceptable base type"
 CANNOT_SUBCLASS_INSTANCE = 'Cannot subclass an instance of %s'
 
 
@@ -431,7 +430,7 @@ class TypeVarTests(BaseTestCase):
         self.assertNotEqual(TypeVar('T', int, str), TypeVar('T', int, str))
 
     def test_cannot_subclass(self):
-        with self.assertRaisesRegex(TypeError, NOT_A_BASE_TYPE % 'TypeVar'):
+        with self.assertRaisesRegex(TypeError, CANNOT_SUBCLASS_TYPE):
             class V(TypeVar): pass
         T = TypeVar("T")
         with self.assertRaisesRegex(TypeError,
@@ -1157,7 +1156,7 @@ class TypeVarTupleTests(BaseTestCase):
         self.assertEndsWith(repr(K[float, str]), 'A[float, str, *typing.Tuple[str, ...]]')
 
     def test_cannot_subclass(self):
-        with self.assertRaisesRegex(TypeError, NOT_A_BASE_TYPE % 'TypeVarTuple'):
+        with self.assertRaisesRegex(TypeError, CANNOT_SUBCLASS_TYPE):
             class C(TypeVarTuple): pass
         Ts = TypeVarTuple('Ts')
         with self.assertRaisesRegex(TypeError,
@@ -8160,11 +8159,11 @@ class ParamSpecTests(BaseTestCase):
         self.assertEqual(C2[Concatenate[T, P2]].__parameters__, (T, P2))
 
     def test_cannot_subclass(self):
-        with self.assertRaisesRegex(TypeError, NOT_A_BASE_TYPE % 'ParamSpec'):
+        with self.assertRaisesRegex(TypeError, CANNOT_SUBCLASS_TYPE):
             class C(ParamSpec): pass
-        with self.assertRaisesRegex(TypeError, NOT_A_BASE_TYPE % 'ParamSpecArgs'):
+        with self.assertRaisesRegex(TypeError, CANNOT_SUBCLASS_TYPE):
             class C(ParamSpecArgs): pass
-        with self.assertRaisesRegex(TypeError, NOT_A_BASE_TYPE % 'ParamSpecKwargs'):
+        with self.assertRaisesRegex(TypeError, CANNOT_SUBCLASS_TYPE):
             class C(ParamSpecKwargs): pass
         P = ParamSpec('P')
         with self.assertRaisesRegex(TypeError,

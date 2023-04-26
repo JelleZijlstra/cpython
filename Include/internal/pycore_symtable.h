@@ -10,9 +10,7 @@ extern "C" {
 
 struct _mod;   // Type defined in pycore_ast.h
 
-typedef enum _block_type { FunctionBlock, ClassBlock, ModuleBlock,
-                           AnnotationBlock, TypeVarBoundBlock, TypeAliasBlock,
-                           TypeParamBlock }
+typedef enum _block_type { FunctionBlock, ClassBlock, ModuleBlock, AnnotationBlock }
     _Py_block_ty;
 
 typedef enum _comprehension_type {
@@ -67,8 +65,6 @@ typedef struct _symtable_entry {
                                              closure over __class__
                                              should be created */
     unsigned ste_comp_iter_target : 1; /* true if visiting comprehension target */
-    unsigned ste_type_params_in_class : 1; /* true if this is a type parameters block
-                                              inside a class */
     int ste_comp_iter_expr; /* non-zero if visiting a comprehension range expression */
     int ste_lineno;          /* first line of block */
     int ste_col_offset;      /* offset of first line of block */
@@ -85,7 +81,6 @@ extern PyTypeObject PySTEntry_Type;
 
 extern long _PyST_GetSymbol(PySTEntryObject *, PyObject *);
 extern int _PyST_GetScope(PySTEntryObject *, PyObject *);
-extern int _PyST_IsFunctionLike(PySTEntryObject *);
 
 extern struct symtable* _PySymtable_Build(
     struct _mod *mod,
@@ -109,7 +104,6 @@ extern PyObject* _Py_Mangle(PyObject *p, PyObject *name);
 #define DEF_IMPORT 2<<6        /* assignment occurred via import */
 #define DEF_ANNOT 2<<7         /* this name is annotated */
 #define DEF_COMP_ITER 2<<8     /* this name is a comprehension iteration variable */
-#define DEF_TYPE_PARAM 2<<9    /* this name is a type parameter */
 
 #define DEF_BOUND (DEF_LOCAL | DEF_PARAM | DEF_IMPORT)
 

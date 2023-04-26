@@ -14,7 +14,6 @@
 #include "pycore_pymem.h"         // _PyMem_IsPtrFreed()
 #include "pycore_pystate.h"       // _PyThreadState_GET()
 #include "pycore_symtable.h"      // PySTEntry_Type
-#include "pycore_typevarobject.h" // _PyTypeVar_Type etc., _Py_initialize_generic
 #include "pycore_unionobject.h"   // _PyUnion_Type
 #include "pycore_interpreteridobject.h"  // _PyInterpreterID_Type
 
@@ -2102,24 +2101,21 @@ static PyTypeObject* static_types[] = {
 PyStatus
 _PyTypes_InitTypes(PyInterpreterState *interp)
 {
-    if (_Py_IsMainInterpreter(interp)) {
-        // All other static types (unless initialized elsewhere)
-        for (size_t i=0; i < Py_ARRAY_LENGTH(static_types); i++) {
-            PyTypeObject *type = static_types[i];
-            if (_PyStaticType_InitBuiltin(type) < 0) {
-                return _PyStatus_ERR("Can't initialize builtin type");
-            }
-            if (type == &PyType_Type) {
-                // Sanitify checks of the two most important types
-                assert(PyBaseObject_Type.tp_base == NULL);
-                assert(PyType_Type.tp_base == &PyBaseObject_Type);
-            }
-        }
+    if (!_Py_IsMainInterpreter(interp)) {
+        return _PyStatus_OK();
     }
 
-    // Must be after static types are initialized
-    if (_Py_initialize_generic(interp) < 0) {
-        return _PyStatus_ERR("Can't initialize Generic type");
+    // All other static types (unless initialized elsewhere)
+    for (size_t i=0; i < Py_ARRAY_LENGTH(static_types); i++) {
+        PyTypeObject *type = static_types[i];
+        if (_PyStaticType_InitBuiltin(type) < 0) {
+            return _PyStatus_ERR("Can't initialize builtin type");
+        }
+        if (type == &PyType_Type) {
+            // Sanitify checks of the two most important types
+            assert(PyBaseObject_Type.tp_base == NULL);
+            assert(PyType_Type.tp_base == &PyBaseObject_Type);
+        }
     }
 
     return _PyStatus_OK();

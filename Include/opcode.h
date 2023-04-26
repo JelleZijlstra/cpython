@@ -45,7 +45,6 @@ extern "C" {
 #define RETURN_GENERATOR                        75
 #define RETURN_VALUE                            83
 #define SETUP_ANNOTATIONS                       85
-#define LOAD_LOCALS                             87
 #define POP_EXCEPT                              89
 #define HAVE_ARGUMENT                           90
 #define STORE_NAME                              90
@@ -118,7 +117,6 @@ extern "C" {
 #define KW_NAMES                               172
 #define CALL_INTRINSIC_1                       173
 #define CALL_INTRINSIC_2                       174
-#define LOAD_CLASS_OR_GLOBAL                   175
 #define MIN_INSTRUMENTED_OPCODE                238
 #define INSTRUMENTED_POP_JUMP_IF_NONE          238
 #define INSTRUMENTED_POP_JUMP_IF_NOT_NONE      239
@@ -199,19 +197,19 @@ extern "C" {
 #define LOAD_CONST__LOAD_FAST                   82
 #define LOAD_FAST__LOAD_CONST                   84
 #define LOAD_FAST__LOAD_FAST                    86
-#define LOAD_GLOBAL_BUILTIN                     88
-#define LOAD_GLOBAL_MODULE                     111
-#define STORE_ATTR_INSTANCE_VALUE              112
-#define STORE_ATTR_SLOT                        113
-#define STORE_ATTR_WITH_HINT                   143
-#define STORE_FAST__LOAD_FAST                  153
-#define STORE_FAST__STORE_FAST                 154
-#define STORE_SUBSCR_DICT                      158
-#define STORE_SUBSCR_LIST_INT                  159
-#define UNPACK_SEQUENCE_LIST                   160
-#define UNPACK_SEQUENCE_TUPLE                  161
-#define UNPACK_SEQUENCE_TWO_TUPLE              166
-#define SEND_GEN                               167
+#define LOAD_GLOBAL_BUILTIN                     87
+#define LOAD_GLOBAL_MODULE                      88
+#define STORE_ATTR_INSTANCE_VALUE              111
+#define STORE_ATTR_SLOT                        112
+#define STORE_ATTR_WITH_HINT                   113
+#define STORE_FAST__LOAD_FAST                  143
+#define STORE_FAST__STORE_FAST                 153
+#define STORE_SUBSCR_DICT                      154
+#define STORE_SUBSCR_LIST_INT                  158
+#define UNPACK_SEQUENCE_LIST                   159
+#define UNPACK_SEQUENCE_TUPLE                  160
+#define UNPACK_SEQUENCE_TWO_TUPLE              161
+#define SEND_GEN                               166
 
 #define HAS_ARG(op) ((((op) >= HAVE_ARGUMENT) && (!IS_PSEUDO_OPCODE(op)))\
     || ((op) == JUMP) \

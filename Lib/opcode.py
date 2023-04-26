@@ -131,7 +131,6 @@ def_op('RETURN_GENERATOR', 75)
 def_op('RETURN_VALUE', 83)
 
 def_op('SETUP_ANNOTATIONS', 85)
-def_op('LOAD_LOCALS', 87)
 
 def_op('POP_EXCEPT', 89)
 
@@ -226,8 +225,6 @@ def_op('KW_NAMES', 172)
 hasconst.append(172)
 def_op('CALL_INTRINSIC_1', 173)
 def_op('CALL_INTRINSIC_2', 174)
-
-name_op('LOAD_CLASS_OR_GLOBAL', 175)
 
 # Instrumented instructions
 MIN_INSTRUMENTED_OPCODE = 238
