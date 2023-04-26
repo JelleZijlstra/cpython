@@ -607,17 +607,16 @@ static PyObject *
 ga_getattro(PyObject *self, PyObject *name)
 {
     gaobject *alias = (gaobject *)self;
-    if (PyUnicode_Check(name)) {
-        for (const char * const *p = attr_exceptions; ; p++) {
-            if (*p == NULL) {
-                return PyObject_GetAttr(alias->origin, name);
-            }
-            if (_PyUnicode_EqualToASCIIString(name, *p)) {
-                break;
-            }
-        }
+    PyObject *result = PyObject_GenericGetAttr(self, name);
+    if (result != NULL) {
+        return result;
     }
-    return PyObject_GenericGetAttr(self, name);
+    assert(PyErr_Occurred());
+    if (PyErr_ExceptionMatches(PyExc_AttributeError)) {
+        PyErr_Clear();
+        return PyObject_GetAttr(alias->origin, name);
+    }
+    return NULL;
 }
 
 static PyObject *
@@ -814,9 +813,6 @@ setup_ga(gaobject *alias, PyObject *origin, PyObject *args) {
 static PyObject *
 ga_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
-    if (!_PyArg_NoKeywords("GenericAlias", kwds)) {
-        return NULL;
-    }
     if (!_PyArg_CheckPositional("GenericAlias", PyTuple_GET_SIZE(args), 2, 2)) {
         return NULL;
     }

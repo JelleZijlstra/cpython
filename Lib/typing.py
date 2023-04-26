@@ -1258,7 +1258,7 @@ class ParamSpec(_Final, _Immutable, _BoundVarianceMixin, _PickleUsingNameMixin,
 def _is_dunder(attr):
     return attr.startswith('__') and attr.endswith('__')
 
-class _BaseGenericAlias(_Final, _root=True):
+class _BaseGenericAlias(object):
     """The central part of internal API.
 
     This represents a generic version of type 'origin' with type arguments 'params'.
@@ -1272,6 +1272,10 @@ class _BaseGenericAlias(_Final, _root=True):
         self._name = name
         self.__origin__ = origin
         self.__slots__ = None  # This is not documented.
+
+    def __init_subclass__(cls, /, *args, **kwds):
+        if '_root' not in kwds:
+            raise TypeError("Cannot subclass special typing classes")
 
     def __call__(self, *args, **kwargs):
         if not self._inst:
@@ -1759,7 +1763,7 @@ def Unpack(self, parameters):
     For more information, see PEP 646.
     """
     item = _type_check(parameters, f'{self} accepts only single type.')
-    return _UnpackGenericAlias(origin=self, args=(item,))
+    return _UnpackGenericAlias(self, (item,))
 
 
 class _UnpackGenericAlias(_GenericAlias, _root=True):
