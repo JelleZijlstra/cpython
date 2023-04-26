@@ -945,6 +945,7 @@ _PyTuple_Resize(PyObject **pv, Py_ssize_t newsize)
         *pv = NULL;
 #ifdef Py_REF_DEBUG
         _Py_DecRefTotal(_PyInterpreterState_GET());
+        state_change(v, 0, -1, "tuple", _Py_GetGlobalRefTotal());
 #endif
         PyObject_GC_Del(v);
         return -1;

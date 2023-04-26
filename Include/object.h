@@ -1,9 +1,16 @@
 #ifndef Py_OBJECT_H
 #define Py_OBJECT_H
+#include "pytypedefs.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+extern long _Py_GetGlobalRefTotal(void);
+extern void state_change(void *ptr, long rc, long diff, const char *type,
+                         long current_total_ref);
+extern void store_state();
+extern void check_with_stored_state();
+extern const char* get_type_name(PyTypeObject* type);
 
 /* Object and type object interface */
 
@@ -247,6 +254,7 @@ static inline void Py_SET_REFCNT(PyObject *ob, Py_ssize_t refcnt) {
     if (_Py_IsImmortal(ob)) {
         return;
     }
+    state_change(ob, refcnt, 0, 0, _Py_GetGlobalRefTotal());
     ob->ob_refcnt = refcnt;
 }
 #if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 < 0x030b0000
@@ -611,6 +619,9 @@ PyAPI_FUNC(void) _Py_DecRef(PyObject *);
 
 static inline Py_ALWAYS_INLINE void Py_INCREF(PyObject *op)
 {
+#ifdef Py_REF_DEBUG
+    state_change(op, op->ob_refcnt + 1, +1, get_type_name(op->ob_type), _Py_GetGlobalRefTotal());
+#endif
 #if defined(Py_REF_DEBUG) && defined(Py_LIMITED_API) && Py_LIMITED_API+0 >= 0x030A0000
     // Stable ABI for Python 3.10 built in debug mode.
     _Py_IncRef(op);
@@ -635,7 +646,7 @@ static inline Py_ALWAYS_INLINE void Py_INCREF(PyObject *op)
     _Py_INCREF_STAT_INC();
 #ifdef Py_REF_DEBUG
     _Py_INC_REFTOTAL();
-#endif
+#endif  // Py_REF_DEBUG
 #endif
 }
 #if !defined(Py_LIMITED_API) || Py_LIMITED_API+0 < 0x030b0000
@@ -657,6 +668,7 @@ static inline void Py_DECREF(const char *filename, int lineno, PyObject *op)
     }
     _Py_DECREF_STAT_INC();
     _Py_DEC_REFTOTAL();
+    state_change(op, op->ob_refcnt - 1, -1, get_type_name(op->ob_type), _Py_GetGlobalRefTotal());
     if (--op->ob_refcnt != 0) {
         if (op->ob_refcnt < 0) {
             _Py_NegativeRefcount(filename, lineno, op);

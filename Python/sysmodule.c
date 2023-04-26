@@ -36,6 +36,7 @@ Data members:
 #include "osdefs.h"               // DELIM
 #include "stdlib_module_names.h"  // _Py_stdlib_module_names
 #include <locale.h>
+#include <stdio.h>
 
 #ifdef MS_WINDOWS
 #define WIN32_LEAN_AND_MEAN
@@ -1850,12 +1851,18 @@ sys_getrefcount_impl(PyObject *module, PyObject *object)
 sys.gettotalrefcount -> Py_ssize_t
 [clinic start generated code]*/
 
+extern void store_state();
+extern void check_with_stored_state();
+
 static Py_ssize_t
 sys_gettotalrefcount_impl(PyObject *module)
 /*[clinic end generated code: output=4103886cf17c25bc input=53b744faa5d2e4f6]*/
 {
     /* It may make sense to return the total for the current interpreter
        or have a second function that does so. */
+    check_with_stored_state();
+    store_state();
+    fprintf(stderr, "ref total %ld\n", _Py_GetGlobalRefTotal());
     return _Py_GetGlobalRefTotal();
 }
 

@@ -73,6 +73,9 @@ get_legacy_reftotal(void)
 static inline void
 reftotal_increment(PyInterpreterState *interp)
 {
+    // if ( REFTOTAL(interp) >= 26600){
+    //     fprintf(stderr, "here -----> %p\n", &(  REFTOTAL(interp) ));
+    // }
     REFTOTAL(interp)++;
 }
 
@@ -2166,6 +2169,7 @@ _Py_NewReference(PyObject *op)
 {
 #ifdef Py_REF_DEBUG
     reftotal_increment(_PyInterpreterState_GET());
+    state_change(op, 1, 1, op->ob_type->tp_name, _Py_GetGlobalRefTotal());
 #endif
     new_reference(op);
 }

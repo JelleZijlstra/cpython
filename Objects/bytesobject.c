@@ -3063,16 +3063,22 @@ _PyBytes_Resize(PyObject **pv, Py_ssize_t newsize)
 #ifdef Py_TRACE_REFS
     _Py_ForgetReference(v);
 #endif
+    
+    long old_refcnt = v->ob_refcnt;
+    state_change(v, 0, 0, "bytes", _Py_GetGlobalRefTotal());
+
     *pv = (PyObject *)
         PyObject_Realloc(v, PyBytesObject_SIZE + newsize);
     if (*pv == NULL) {
 #ifdef Py_REF_DEBUG
-        _Py_DecRefTotal(_PyInterpreterState_GET());
+        _Py_DecRefTotal(_PyInterpreterState_GET()); 
 #endif
         PyObject_Free(v);
         PyErr_NoMemory();
         return -1;
     }
+    state_change(*pv, old_refcnt, 0, "bytes", _Py_GetGlobalRefTotal());
+
     _Py_NewReferenceNoTotal(*pv);
     sv = (PyBytesObject *) *pv;
     Py_SET_SIZE(sv, newsize);

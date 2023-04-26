@@ -42,8 +42,8 @@ PyModuleDef_Init(PyModuleDef* def)
 {
     assert(PyModuleDef_Type.tp_flags & Py_TPFLAGS_READY);
     if (def->m_base.m_index == 0) {
-        Py_SET_REFCNT(def, 1);
         Py_SET_TYPE(def, &PyModuleDef_Type);
+        Py_SET_REFCNT(def, 1);
         def->m_base.m_index = _PyImport_GetNextModuleIndex();
     }
     return (PyObject*)def;

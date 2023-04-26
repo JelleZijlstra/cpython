@@ -230,6 +230,10 @@ struct _typeobject {
     char tp_watched;
 };
 
+const char* __attribute__((weak)) get_type_name(PyTypeObject* type)  {
+    return type ? type->tp_name : "NULL";
+}
+
 /* This struct is used by the specializer
  * It should should be treated as an opaque blob
  * by code other than the specializer and interpreter. */

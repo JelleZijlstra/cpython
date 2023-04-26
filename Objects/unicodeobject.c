@@ -56,6 +56,7 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #include "pycore_unicodeobject.h" // struct _Py_unicode_state
 #include "pycore_unicodeobject_generated.h"  // _PyUnicode_InitStaticStrings()
 #include "stringlib/eq.h"         // unicode_eq()
+#include "object.h"
 
 #ifdef MS_WINDOWS
 #include <windows.h>
@@ -972,7 +973,8 @@ resize_compact(PyObject *unicode, Py_ssize_t length)
 #ifdef Py_TRACE_REFS
     _Py_ForgetReference(unicode);
 #endif
-
+    long old_refcnt = unicode->ob_refcnt;
+    state_change(unicode, 0, 0, "str", _Py_GetGlobalRefTotal());
     new_unicode = (PyObject *)PyObject_Realloc(unicode, new_size);
     if (new_unicode == NULL) {
         _Py_NewReferenceNoTotal(unicode);
@@ -980,6 +982,8 @@ resize_compact(PyObject *unicode, Py_ssize_t length)
         return NULL;
     }
     unicode = new_unicode;
+    state_change(unicode, old_refcnt, 0, "str", _Py_GetGlobalRefTotal());
+
     _Py_NewReferenceNoTotal(unicode);
 
     _PyUnicode_LENGTH(unicode) = length;
@@ -1022,12 +1026,15 @@ resize_inplace(PyObject *unicode, Py_ssize_t length)
         _PyUnicode_UTF8(unicode) = NULL;
         _PyUnicode_UTF8_LENGTH(unicode) = 0;
     }
-
+    long old_refcnt = unicode->ob_refcnt;
+    state_change(unicode, 0, 0, "str", _Py_GetGlobalRefTotal());
     data = (PyObject *)PyObject_Realloc(data, new_size);
     if (data == NULL) {
         PyErr_NoMemory();
         return -1;
     }
+    state_change(unicode, old_refcnt, 0, "str", _Py_GetGlobalRefTotal());
+
     _PyUnicode_DATA_ANY(unicode) = data;
     if (share_utf8) {
         _PyUnicode_UTF8(unicode) = data;

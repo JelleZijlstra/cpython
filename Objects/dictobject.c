@@ -305,6 +305,7 @@ dictkeys_incref(PyDictKeysObject *dk)
 {
 #ifdef Py_REF_DEBUG
     _Py_IncRefTotal(_PyInterpreterState_GET());
+    state_change(dk, -1, +1, "__PyDictKeysObject", _Py_GetGlobalRefTotal());
 #endif
     dk->dk_refcnt++;
 }
@@ -315,6 +316,7 @@ dictkeys_decref(PyInterpreterState *interp, PyDictKeysObject *dk)
     assert(dk->dk_refcnt > 0);
 #ifdef Py_REF_DEBUG
     _Py_DecRefTotal(_PyInterpreterState_GET());
+    state_change(dk, -1, -1, "__PyDictKeysObject", _Py_GetGlobalRefTotal());
 #endif
     if (--dk->dk_refcnt == 0) {
         free_keys_object(interp, dk);
@@ -635,6 +637,7 @@ new_keys_object(PyInterpreterState *interp, uint8_t log2_size, bool unicode)
     }
 #ifdef Py_REF_DEBUG
     _Py_IncRefTotal(_PyInterpreterState_GET());
+    state_change(dk, -1, +1, "__PyDictKeysObject", _Py_GetGlobalRefTotal());
 #endif
     dk->dk_refcnt = 1;
     dk->dk_log2_size = log2_size;
@@ -825,6 +828,7 @@ clone_combined_dict_keys(PyDictObject *orig)
        keys->dk_refcnt is already set to 1 (after memcpy). */
 #ifdef Py_REF_DEBUG
     _Py_IncRefTotal(_PyInterpreterState_GET());
+    state_change(keys, -1, +1, "__PyDictKeysObject", _Py_GetGlobalRefTotal());
 #endif
     return keys;
 }
@@ -1531,6 +1535,7 @@ dictresize(PyInterpreterState *interp, PyDictObject *mp,
         // are moved already.
 #ifdef Py_REF_DEBUG
         _Py_DecRefTotal(_PyInterpreterState_GET());
+        state_change(oldkeys, -1, -1, "__PyDictKeysObject", _Py_GetGlobalRefTotal());
 #endif
         if (oldkeys == Py_EMPTY_KEYS) {
             oldkeys->dk_refcnt--;

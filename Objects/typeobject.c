@@ -2171,7 +2171,6 @@ mro_implementation(PyTypeObject *type)
             return NULL;
         }
 
-        ;
         PyTuple_SET_ITEM(result, 0, Py_NewRef(type));
         for (Py_ssize_t i = 0; i < k; i++) {
             PyObject *cls = PyTuple_GET_ITEM(base->tp_mro, i);
