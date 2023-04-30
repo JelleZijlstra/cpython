@@ -1249,7 +1249,7 @@ class ParamSpec(_Final, _Immutable, _BoundVarianceMixin, _PickleUsingNameMixin, 
     def kwargs(self):
         return ParamSpecKwargs(self)
 
-    def __init__(self, name, *, bound=None, default=None, covariant=False, contravariant=False):
+    def __init__(self, name, *, bound=None, default=_marker, covariant=False, contravariant=False):
         self.__name__ = name
         super().__init__(bound, covariant, contravariant)
         _DefaultMixin.__init__(self, default)
