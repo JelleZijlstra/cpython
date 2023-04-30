@@ -218,7 +218,6 @@ _Py_make_parameters(PyObject *args)
     for (Py_ssize_t iarg = 0; iarg < nargs; iarg++) {
         PyObject *t = PyTuple_GET_ITEM(args, iarg);
         PyObject *subst;
-
         // We don't want __parameters__ descriptor of a bare Python class.
         if (PyType_Check(t)) {
             continue;
@@ -271,7 +270,6 @@ _Py_make_parameters(PyObject *args)
                 for (Py_ssize_t j = 0; j < len2; j++) {
                     PyObject *default_;
                     PyObject *t2 = PyTuple_GET_ITEM(subparams, j);
-
                     bool does_not_contain = tuple_index(parameters, nargs, t2) == -1;
                     if (does_not_contain) {
                         if (_PyObject_LookupAttr(t2, &_Py_ID(__default__), &default_) < 0) {

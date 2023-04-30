@@ -1,35 +1,52 @@
-import abc
-import collections
 import contextlib
+import collections
+from collections import defaultdict
+from functools import lru_cache, wraps
 import inspect
 import itertools
 import pickle
 import re
 import sys
-import textwrap
-import types
-import typing
 import warnings
-import weakref
-from collections import defaultdict
-from copy import copy, deepcopy
-from functools import lru_cache, wraps
-from test import _typed_dict_helper, mod_generics_cache
-from test.support import captured_stderr, cpython_only, import_helper
-from typing import (IO, KT, VT, Annotated, Any, AnyStr,  # Not in __all__.
-                    BinaryIO, Callable, ClassVar, Concatenate, Dict, Final,
-                    ForwardRef, Generic, List, Literal, LiteralString, Match,
-                    MutableMapping, NamedTuple, Never, NoReturn, NotRequired,
-                    Optional, ParamSpec, ParamSpecArgs, ParamSpecKwargs,
-                    Pattern, Protocol, Required, Self, T, TextIO, Tuple, Type,
-                    TypeAlias, TypedDict, TypeGuard, TypeVar, TypeVarTuple,
-                    Union, Unpack, assert_never, assert_type, cast,
-                    clear_overloads, dataclass_transform, final, get_args,
-                    get_origin, get_overloads, get_type_hints, is_typeddict,
-                    no_type_check, no_type_check_decorator, overload, override,
-                    reveal_type, runtime_checkable)
-from unittest import TestCase, main, skip, skipUnless
+from unittest import TestCase, main, skipUnless, skip
 from unittest.mock import patch
+from copy import copy, deepcopy
+
+from typing import Any, NoReturn, Never, assert_never
+from typing import overload, get_overloads, clear_overloads
+from typing import TypeVar, TypeVarTuple, Unpack, AnyStr
+from typing import T, KT, VT  # Not in __all__.
+from typing import Union, Optional, Literal
+from typing import Tuple, List, Dict, MutableMapping
+from typing import Callable
+from typing import Generic, ClassVar, Final, final, Protocol
+from typing import assert_type, cast, runtime_checkable
+from typing import get_type_hints
+from typing import get_origin, get_args
+from typing import override
+from typing import is_typeddict
+from typing import reveal_type
+from typing import dataclass_transform
+from typing import no_type_check, no_type_check_decorator
+from typing import Type
+from typing import NamedTuple, NotRequired, Required, TypedDict
+from typing import IO, TextIO, BinaryIO
+from typing import Pattern, Match
+from typing import Annotated, ForwardRef
+from typing import Self, LiteralString
+from typing import TypeAlias
+from typing import ParamSpec, Concatenate, ParamSpecArgs, ParamSpecKwargs
+from typing import TypeGuard
+import abc
+import textwrap
+import typing
+import weakref
+import types
+
+from test.support import import_helper, captured_stderr, cpython_only
+from test import mod_generics_cache
+from test import _typed_dict_helper
+
 
 CANNOT_SUBCLASS_TYPE = 'Cannot subclass special typing classes'
 NOT_A_BASE_TYPE = "type 'typing.%s' is not an acceptable base type"
@@ -4734,7 +4751,6 @@ class AssertTypeTests(BaseTestCase):
 # We need this to make sure that `@no_type_check` respects `__module__` attr:
 from test import ann_module8
 
-
 @no_type_check
 class NoTypeCheck_Outer:
     Inner = ann_module8.NoTypeCheck_Outer.Inner
@@ -7344,7 +7360,7 @@ class IOTests(BaseTestCase):
     def test_io_submodule(self):
         with warnings.catch_warnings(record=True) as w:
             warnings.filterwarnings("default", category=DeprecationWarning)
-            from typing.io import IO, BinaryIO, TextIO, __all__, __name__
+            from typing.io import IO, TextIO, BinaryIO, __all__, __name__
             self.assertIs(IO, typing.IO)
             self.assertIs(TextIO, typing.TextIO)
             self.assertIs(BinaryIO, typing.BinaryIO)
@@ -8568,7 +8584,6 @@ class AllTests(BaseTestCase):
 
     def test_all(self):
         from typing import __all__ as a
-
         # Just spot-check the first and last of every category.
         self.assertIn('AbstractSet', a)
         self.assertIn('ValuesView', a)
