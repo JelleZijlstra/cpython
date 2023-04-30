@@ -2123,6 +2123,7 @@ compiler_type_params(struct compiler *c, asdl_typeparam_seq *typeparams)
         return SUCCESS;
     }
     Py_ssize_t n = asdl_seq_LEN(typeparams);
+    bool seen_default = false;
 
     for (Py_ssize_t i = 0; i < n; i++) {
         typeparam_ty typeparam = asdl_seq_GET(typeparams, i);
@@ -2145,11 +2146,17 @@ compiler_type_params(struct compiler *c, asdl_typeparam_seq *typeparams)
                 ADDOP_I(c, loc, CALL_INTRINSIC_1, INTRINSIC_TYPEVAR);
             }
             if (typeparam->v.TypeVar.default_) {
+                seen_default = true;
                 expr_ty default_ = typeparam->v.TypeVar.default_;
                 if (compiler_type_param_bound_or_default(c, default_, typeparam->v.TypeVar.name) < 0) {
                     return ERROR;
                 }
                 ADDOP_I(c, loc, CALL_INTRINSIC_2, INTRINSIC_SET_TYPEPARAM_DEFAULT);
+            }
+            else if (seen_default) {
+                return compiler_error(c, loc, "non-default type parameter '%U' "
+                                      "follows default type parameter",
+                                      typeparam->v.TypeVar.name);
             }
             ADDOP_I(c, loc, COPY, 1);
             RETURN_IF_ERROR(compiler_nameop(c, loc, typeparam->v.TypeVar.name, Store));
@@ -2163,6 +2170,12 @@ compiler_type_params(struct compiler *c, asdl_typeparam_seq *typeparams)
                     return ERROR;
                 }
                 ADDOP_I(c, loc, CALL_INTRINSIC_2, INTRINSIC_SET_TYPEPARAM_DEFAULT);
+                seen_default = true;
+            }
+            else if (seen_default) {
+                return compiler_error(c, loc, "non-default type parameter '%U' "
+                                      "follows default type parameter",
+                                      typeparam->v.TypeVarTuple.name);
             }
             ADDOP_I(c, loc, COPY, 1);
             RETURN_IF_ERROR(compiler_nameop(c, loc, typeparam->v.TypeVarTuple.name, Store));
@@ -2176,6 +2189,12 @@ compiler_type_params(struct compiler *c, asdl_typeparam_seq *typeparams)
                     return ERROR;
                 }
                 ADDOP_I(c, loc, CALL_INTRINSIC_2, INTRINSIC_SET_TYPEPARAM_DEFAULT);
+                seen_default = true;
+            }
+            else if (seen_default) {
+                return compiler_error(c, loc, "non-default type parameter '%U' "
+                                      "follows default type parameter",
+                                      typeparam->v.ParamSpec.name);
             }
             ADDOP_I(c, loc, COPY, 1);
             RETURN_IF_ERROR(compiler_nameop(c, loc, typeparam->v.ParamSpec.name, Store));
