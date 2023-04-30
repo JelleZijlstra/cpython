@@ -240,7 +240,7 @@ _Py_make_parameters(PyObject *args)
                 } else if (seen_default) {
                     return PyErr_Format(
                         PyExc_TypeError,
-                        "type parameter %R without a default follows one with a default",
+                        "non-default type parameter %R follows default type parameter",
                         t
                     );
                 }
@@ -282,7 +282,7 @@ _Py_make_parameters(PyObject *args)
                         } else if (seen_default) {
                             return PyErr_Format(
                                 PyExc_TypeError,
-                                "type parameter %R without a default follows one with a default",
+                                "non-default type parameter %R follows default type parameter",
                                 t2
                             );
                         }
