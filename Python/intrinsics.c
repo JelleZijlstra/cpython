@@ -259,4 +259,5 @@ _PyIntrinsics_BinaryFunctions[] = {
     [INTRINSIC_TYPEVAR_WITH_CONSTRAINTS] = make_typevar_with_constraints,
     [INTRINSIC_SET_FUNCTION_TYPE_PARAMS] = _Py_set_function_type_params,
     [INTRINSIC_SET_CLASS_DICT] = _Py_set_function_class_dict,
+    [INTRINSIC_SET_TYPEPARAM_DEFAULT] = _Py_set_typeparam_default,
 };

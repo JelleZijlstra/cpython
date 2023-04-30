@@ -195,6 +195,7 @@ void _PyAST_Fini(PyInterpreterState *interp)
     Py_CLEAR(state->conversion);
     Py_CLEAR(state->ctx);
     Py_CLEAR(state->decorator_list);
+    Py_CLEAR(state->default_);
     Py_CLEAR(state->defaults);
     Py_CLEAR(state->elt);
     Py_CLEAR(state->elts);
@@ -306,6 +307,7 @@ static int init_identifiers(struct ast_state *state)
     if ((state->conversion = PyUnicode_InternFromString("conversion")) == NULL) return 0;
     if ((state->ctx = PyUnicode_InternFromString("ctx")) == NULL) return 0;
     if ((state->decorator_list = PyUnicode_InternFromString("decorator_list")) == NULL) return 0;
+    if ((state->default_ = PyUnicode_InternFromString("default_")) == NULL) return 0;
     if ((state->defaults = PyUnicode_InternFromString("defaults")) == NULL) return 0;
     if ((state->elt = PyUnicode_InternFromString("elt")) == NULL) return 0;
     if ((state->elts = PyUnicode_InternFromString("elts")) == NULL) return 0;
@@ -785,12 +787,15 @@ static PyObject* ast2obj_typeparam(struct ast_state *state, void*);
 static const char * const TypeVar_fields[]={
     "name",
     "bound",
+    "default_",
 };
 static const char * const ParamSpec_fields[]={
     "name",
+    "default_",
 };
 static const char * const TypeVarTuple_fields[]={
     "name",
+    "default_",
 };
 
 
@@ -1896,9 +1901,9 @@ init_types(struct ast_state *state)
     if (!state->TypeIgnore_type) return 0;
     state->typeparam_type = make_type(state, "typeparam", state->AST_type,
                                       NULL, 0,
-        "typeparam = TypeVar(identifier name, expr? bound)\n"
-        "          | ParamSpec(identifier name)\n"
-        "          | TypeVarTuple(identifier name)");
+        "typeparam = TypeVar(identifier name, expr? bound, expr? default_)\n"
+        "          | ParamSpec(identifier name, expr? default_)\n"
+        "          | TypeVarTuple(identifier name, expr? default_)");
     if (!state->typeparam_type) return 0;
     if (!add_attributes(state, state->typeparam_type, typeparam_attributes, 4))
         return 0;
@@ -1909,21 +1914,28 @@ init_types(struct ast_state *state)
         == -1)
         return 0;
     state->TypeVar_type = make_type(state, "TypeVar", state->typeparam_type,
-                                    TypeVar_fields, 2,
-        "TypeVar(identifier name, expr? bound)");
+                                    TypeVar_fields, 3,
+        "TypeVar(identifier name, expr? bound, expr? default_)");
     if (!state->TypeVar_type) return 0;
     if (PyObject_SetAttr(state->TypeVar_type, state->bound, Py_None) == -1)
         return 0;
+    if (PyObject_SetAttr(state->TypeVar_type, state->default_, Py_None) == -1)
+        return 0;
     state->ParamSpec_type = make_type(state, "ParamSpec",
                                       state->typeparam_type, ParamSpec_fields,
-                                      1,
-        "ParamSpec(identifier name)");
+                                      2,
+        "ParamSpec(identifier name, expr? default_)");
     if (!state->ParamSpec_type) return 0;
+    if (PyObject_SetAttr(state->ParamSpec_type, state->default_, Py_None) == -1)
+        return 0;
     state->TypeVarTuple_type = make_type(state, "TypeVarTuple",
                                          state->typeparam_type,
-                                         TypeVarTuple_fields, 1,
-        "TypeVarTuple(identifier name)");
+                                         TypeVarTuple_fields, 2,
+        "TypeVarTuple(identifier name, expr? default_)");
     if (!state->TypeVarTuple_type) return 0;
+    if (PyObject_SetAttr(state->TypeVarTuple_type, state->default_, Py_None) ==
+        -1)
+        return 0;
 
     state->recursion_depth = 0;
     state->recursion_limit = 0;
@@ -3714,8 +3726,9 @@ _PyAST_TypeIgnore(int lineno, string tag, PyArena *arena)
 }
 
 typeparam_ty
-_PyAST_TypeVar(identifier name, expr_ty bound, int lineno, int col_offset, int
-               end_lineno, int end_col_offset, PyArena *arena)
+_PyAST_TypeVar(identifier name, expr_ty bound, expr_ty default_, int lineno,
+               int col_offset, int end_lineno, int end_col_offset, PyArena
+               *arena)
 {
     typeparam_ty p;
     if (!name) {
@@ -3729,6 +3742,7 @@ _PyAST_TypeVar(identifier name, expr_ty bound, int lineno, int col_offset, int
     p->kind = TypeVar_kind;
     p->v.TypeVar.name = name;
     p->v.TypeVar.bound = bound;
+    p->v.TypeVar.default_ = default_;
     p->lineno = lineno;
     p->col_offset = col_offset;
     p->end_lineno = end_lineno;
@@ -3737,8 +3751,8 @@ _PyAST_TypeVar(identifier name, expr_ty bound, int lineno, int col_offset, int
 }
 
 typeparam_ty
-_PyAST_ParamSpec(identifier name, int lineno, int col_offset, int end_lineno,
-                 int end_col_offset, PyArena *arena)
+_PyAST_ParamSpec(identifier name, expr_ty default_, int lineno, int col_offset,
+                 int end_lineno, int end_col_offset, PyArena *arena)
 {
     typeparam_ty p;
     if (!name) {
@@ -3751,6 +3765,7 @@ _PyAST_ParamSpec(identifier name, int lineno, int col_offset, int end_lineno,
         return NULL;
     p->kind = ParamSpec_kind;
     p->v.ParamSpec.name = name;
+    p->v.ParamSpec.default_ = default_;
     p->lineno = lineno;
     p->col_offset = col_offset;
     p->end_lineno = end_lineno;
@@ -3759,8 +3774,9 @@ _PyAST_ParamSpec(identifier name, int lineno, int col_offset, int end_lineno,
 }
 
 typeparam_ty
-_PyAST_TypeVarTuple(identifier name, int lineno, int col_offset, int
-                    end_lineno, int end_col_offset, PyArena *arena)
+_PyAST_TypeVarTuple(identifier name, expr_ty default_, int lineno, int
+                    col_offset, int end_lineno, int end_col_offset, PyArena
+                    *arena)
 {
     typeparam_ty p;
     if (!name) {
@@ -3773,6 +3789,7 @@ _PyAST_TypeVarTuple(identifier name, int lineno, int col_offset, int
         return NULL;
     p->kind = TypeVarTuple_kind;
     p->v.TypeVarTuple.name = name;
+    p->v.TypeVarTuple.default_ = default_;
     p->lineno = lineno;
     p->col_offset = col_offset;
     p->end_lineno = end_lineno;
@@ -5684,6 +5701,11 @@ ast2obj_typeparam(struct ast_state *state, void* _o)
         if (PyObject_SetAttr(result, state->bound, value) == -1)
             goto failed;
         Py_DECREF(value);
+        value = ast2obj_expr(state, o->v.TypeVar.default_);
+        if (!value) goto failed;
+        if (PyObject_SetAttr(result, state->default_, value) == -1)
+            goto failed;
+        Py_DECREF(value);
         break;
     case ParamSpec_kind:
         tp = (PyTypeObject *)state->ParamSpec_type;
@@ -5694,6 +5716,11 @@ ast2obj_typeparam(struct ast_state *state, void* _o)
         if (PyObject_SetAttr(result, state->name, value) == -1)
             goto failed;
         Py_DECREF(value);
+        value = ast2obj_expr(state, o->v.ParamSpec.default_);
+        if (!value) goto failed;
+        if (PyObject_SetAttr(result, state->default_, value) == -1)
+            goto failed;
+        Py_DECREF(value);
         break;
     case TypeVarTuple_kind:
         tp = (PyTypeObject *)state->TypeVarTuple_type;
@@ -5702,6 +5729,11 @@ ast2obj_typeparam(struct ast_state *state, void* _o)
         value = ast2obj_identifier(state, o->v.TypeVarTuple.name);
         if (!value) goto failed;
         if (PyObject_SetAttr(result, state->name, value) == -1)
+            goto failed;
+        Py_DECREF(value);
+        value = ast2obj_expr(state, o->v.TypeVarTuple.default_);
+        if (!value) goto failed;
+        if (PyObject_SetAttr(result, state->default_, value) == -1)
             goto failed;
         Py_DECREF(value);
         break;
@@ -12385,6 +12417,7 @@ obj2ast_typeparam(struct ast_state *state, PyObject* obj, typeparam_ty* out,
     if (isinstance) {
         identifier name;
         expr_ty bound;
+        expr_ty default_;
 
         if (_PyObject_LookupAttr(obj, state->name, &tmp) < 0) {
             return 1;
@@ -12420,8 +12453,25 @@ obj2ast_typeparam(struct ast_state *state, PyObject* obj, typeparam_ty* out,
             if (res != 0) goto failed;
             Py_CLEAR(tmp);
         }
-        *out = _PyAST_TypeVar(name, bound, lineno, col_offset, end_lineno,
-                              end_col_offset, arena);
+        if (_PyObject_LookupAttr(obj, state->default_, &tmp) < 0) {
+            return 1;
+        }
+        if (tmp == NULL || tmp == Py_None) {
+            Py_CLEAR(tmp);
+            default_ = NULL;
+        }
+        else {
+            int res;
+            if (_Py_EnterRecursiveCall(" while traversing 'TypeVar' node")) {
+                goto failed;
+            }
+            res = obj2ast_expr(state, tmp, &default_, arena);
+            _Py_LeaveRecursiveCall();
+            if (res != 0) goto failed;
+            Py_CLEAR(tmp);
+        }
+        *out = _PyAST_TypeVar(name, bound, default_, lineno, col_offset,
+                              end_lineno, end_col_offset, arena);
         if (*out == NULL) goto failed;
         return 0;
     }
@@ -12432,6 +12482,7 @@ obj2ast_typeparam(struct ast_state *state, PyObject* obj, typeparam_ty* out,
     }
     if (isinstance) {
         identifier name;
+        expr_ty default_;
 
         if (_PyObject_LookupAttr(obj, state->name, &tmp) < 0) {
             return 1;
@@ -12450,7 +12501,24 @@ obj2ast_typeparam(struct ast_state *state, PyObject* obj, typeparam_ty* out,
             if (res != 0) goto failed;
             Py_CLEAR(tmp);
         }
-        *out = _PyAST_ParamSpec(name, lineno, col_offset, end_lineno,
+        if (_PyObject_LookupAttr(obj, state->default_, &tmp) < 0) {
+            return 1;
+        }
+        if (tmp == NULL || tmp == Py_None) {
+            Py_CLEAR(tmp);
+            default_ = NULL;
+        }
+        else {
+            int res;
+            if (_Py_EnterRecursiveCall(" while traversing 'ParamSpec' node")) {
+                goto failed;
+            }
+            res = obj2ast_expr(state, tmp, &default_, arena);
+            _Py_LeaveRecursiveCall();
+            if (res != 0) goto failed;
+            Py_CLEAR(tmp);
+        }
+        *out = _PyAST_ParamSpec(name, default_, lineno, col_offset, end_lineno,
                                 end_col_offset, arena);
         if (*out == NULL) goto failed;
         return 0;
@@ -12462,6 +12530,7 @@ obj2ast_typeparam(struct ast_state *state, PyObject* obj, typeparam_ty* out,
     }
     if (isinstance) {
         identifier name;
+        expr_ty default_;
 
         if (_PyObject_LookupAttr(obj, state->name, &tmp) < 0) {
             return 1;
@@ -12480,8 +12549,25 @@ obj2ast_typeparam(struct ast_state *state, PyObject* obj, typeparam_ty* out,
             if (res != 0) goto failed;
             Py_CLEAR(tmp);
         }
-        *out = _PyAST_TypeVarTuple(name, lineno, col_offset, end_lineno,
-                                   end_col_offset, arena);
+        if (_PyObject_LookupAttr(obj, state->default_, &tmp) < 0) {
+            return 1;
+        }
+        if (tmp == NULL || tmp == Py_None) {
+            Py_CLEAR(tmp);
+            default_ = NULL;
+        }
+        else {
+            int res;
+            if (_Py_EnterRecursiveCall(" while traversing 'TypeVarTuple' node")) {
+                goto failed;
+            }
+            res = obj2ast_expr(state, tmp, &default_, arena);
+            _Py_LeaveRecursiveCall();
+            if (res != 0) goto failed;
+            Py_CLEAR(tmp);
+        }
+        *out = _PyAST_TypeVarTuple(name, default_, lineno, col_offset,
+                                   end_lineno, end_col_offset, arena);
         if (*out == NULL) goto failed;
         return 0;
     }

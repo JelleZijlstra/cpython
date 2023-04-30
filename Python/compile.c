@@ -2091,6 +2091,32 @@ wrap_in_stopiteration_handler(struct compiler *c)
 }
 
 static int
+compiler_type_param_bound_or_default(struct compiler *c, expr_ty e, identifier name)
+{
+    if (compiler_enter_scope(c, name, COMPILER_SCOPE_TYPEPARAMS,
+                            (void *)e, e->lineno) == -1) {
+        return ERROR;
+    }
+    VISIT(c, expr, e);
+    ADDOP_IN_SCOPE(c, LOC(e), RETURN_VALUE);
+    PyCodeObject *co = optimize_and_assemble(c, 1);
+    compiler_exit_scope(c);
+    if (co == NULL) {
+        return ERROR;
+    }
+    if (compiler_make_closure(c, LOC(e), co, 0) < 0) {
+        Py_DECREF(co);
+        return ERROR;
+    }
+    Py_DECREF(co);
+    if (c->u->u_ste->ste_type_params_in_class) {
+        ADDOP_I(c, LOC(e), LOAD_FAST, 0);
+        ADDOP_I(c, LOC(e), CALL_INTRINSIC_2, INTRINSIC_SET_CLASS_DICT);
+    }
+    return SUCCESS;
+}
+
+static int
 compiler_type_params(struct compiler *c, asdl_typeparam_seq *typeparams)
 {
     if (!typeparams) {
@@ -2106,25 +2132,8 @@ compiler_type_params(struct compiler *c, asdl_typeparam_seq *typeparams)
             ADDOP_LOAD_CONST(c, loc, typeparam->v.TypeVar.name);
             if (typeparam->v.TypeVar.bound) {
                 expr_ty bound = typeparam->v.TypeVar.bound;
-                if (compiler_enter_scope(c, typeparam->v.TypeVar.name, COMPILER_SCOPE_TYPEPARAMS,
-                                        (void *)typeparam, bound->lineno) == -1) {
+                if (compiler_type_param_bound_or_default(c, bound, typeparam->v.TypeVar.name) < 0) {
                     return ERROR;
-                }
-                VISIT(c, expr, bound);
-                ADDOP_IN_SCOPE(c, loc, RETURN_VALUE);
-                PyCodeObject *co = optimize_and_assemble(c, 1);
-                compiler_exit_scope(c);
-                if (co == NULL) {
-                    return ERROR;
-                }
-                if (compiler_make_closure(c, loc, co, 0) < 0) {
-                    Py_DECREF(co);
-                    return ERROR;
-                }
-                Py_DECREF(co);
-                if (c->u->u_ste->ste_type_params_in_class) {
-                    ADDOP_I(c, loc, LOAD_FAST, 0);
-                    ADDOP_I(c, loc, CALL_INTRINSIC_2, INTRINSIC_SET_CLASS_DICT);
                 }
 
                 int intrinsic = bound->kind == Tuple_kind
@@ -2135,18 +2144,39 @@ compiler_type_params(struct compiler *c, asdl_typeparam_seq *typeparams)
             else {
                 ADDOP_I(c, loc, CALL_INTRINSIC_1, INTRINSIC_TYPEVAR);
             }
+            if (typeparam->v.TypeVar.default_) {
+                expr_ty default_ = typeparam->v.TypeVar.default_;
+                if (compiler_type_param_bound_or_default(c, default_, typeparam->v.TypeVar.name) < 0) {
+                    return ERROR;
+                }
+                ADDOP_I(c, loc, CALL_INTRINSIC_2, INTRINSIC_SET_TYPEPARAM_DEFAULT);
+            }
             ADDOP_I(c, loc, COPY, 1);
             RETURN_IF_ERROR(compiler_nameop(c, loc, typeparam->v.TypeVar.name, Store));
             break;
         case TypeVarTuple_kind:
             ADDOP_LOAD_CONST(c, loc, typeparam->v.TypeVarTuple.name);
             ADDOP_I(c, loc, CALL_INTRINSIC_1, INTRINSIC_TYPEVARTUPLE);
+            if (typeparam->v.TypeVarTuple.default_) {
+                expr_ty default_ = typeparam->v.TypeVarTuple.default_;
+                if (compiler_type_param_bound_or_default(c, default_, typeparam->v.TypeVarTuple.name) < 0) {
+                    return ERROR;
+                }
+                ADDOP_I(c, loc, CALL_INTRINSIC_2, INTRINSIC_SET_TYPEPARAM_DEFAULT);
+            }
             ADDOP_I(c, loc, COPY, 1);
             RETURN_IF_ERROR(compiler_nameop(c, loc, typeparam->v.TypeVarTuple.name, Store));
             break;
         case ParamSpec_kind:
             ADDOP_LOAD_CONST(c, loc, typeparam->v.ParamSpec.name);
             ADDOP_I(c, loc, CALL_INTRINSIC_1, INTRINSIC_PARAMSPEC);
+            if (typeparam->v.ParamSpec.default_) {
+                expr_ty default_ = typeparam->v.ParamSpec.default_;
+                if (compiler_type_param_bound_or_default(c, default_, typeparam->v.ParamSpec.name) < 0) {
+                    return ERROR;
+                }
+                ADDOP_I(c, loc, CALL_INTRINSIC_2, INTRINSIC_SET_TYPEPARAM_DEFAULT);
+            }
             ADDOP_I(c, loc, COPY, 1);
             RETURN_IF_ERROR(compiler_nameop(c, loc, typeparam->v.ParamSpec.name, Store));
             break;
