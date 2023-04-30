@@ -274,22 +274,22 @@ def _collect_parameters(args):
                         parameters.append(collected)
         elif hasattr(t, '__typing_subst__'):
             if t not in parameters:
-                if t.__default__ is not None:
+                if hasattr(t, "__default__") and t.__default__ is not None:
                     seen_default = True
                 elif seen_default:
                     raise TypeError(
-                        f"TypeVarLike {t!r} without a default follows one with a default"
+                        f"Type parameter {t!r} without a default follows one with a default"
                     )
 
                 parameters.append(t)
         else:
             for x in getattr(t, '__parameters__', ()):
                 if x not in parameters:
-                    if x.__default__ is not None:
+                    if hasattr(x, "__default__") and x.__default__ is not None:
                         seen_default = True
                     elif seen_default:
                         raise TypeError(
-                            f"TypeVarLike {t!r} without a default follows one with a default"
+                            f"Type parameter {t!r} without a default follows one with a default"
                         )
 
                     parameters.append(x)
