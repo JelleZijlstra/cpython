@@ -278,7 +278,7 @@ def _collect_parameters(args):
                     seen_default = True
                 elif seen_default:
                     raise TypeError(
-                        f"Type parameter {t!r} without a default follows one with a default"
+                        f"non-default type parameter {t!r} follows default type parameter"
                     )
 
                 parameters.append(t)
@@ -289,7 +289,7 @@ def _collect_parameters(args):
                         seen_default = True
                     elif seen_default:
                         raise TypeError(
-                            f"Type parameter {t!r} without a default follows one with a default"
+                            f"non-default type parameter {x!r} follows default type parameter"
                         )
 
                     parameters.append(x)
