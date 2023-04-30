@@ -542,19 +542,24 @@ extern "C" {
     INIT_STR(anon_setcomp, "<setcomp>"), \
     INIT_STR(anon_string, "<string>"), \
     INIT_STR(anon_unknown, "<unknown>"), \
+    INIT_STR(class_dict, ".class_dict"), \
     INIT_STR(close_br, "}"), \
     INIT_STR(dbl_close_br, "}}"), \
     INIT_STR(dbl_open_br, "{{"), \
     INIT_STR(dbl_percent, "%%"), \
+    INIT_STR(defaults, ".defaults"), \
     INIT_STR(dot, "."), \
     INIT_STR(dot_locals, ".<locals>"), \
     INIT_STR(empty, ""), \
+    INIT_STR(generic_base, ".generic_base"), \
     INIT_STR(json_decoder, "json.decoder"), \
+    INIT_STR(kwdefaults, ".kwdefaults"), \
     INIT_STR(list_err, "list index out of range"), \
     INIT_STR(newline, "\n"), \
     INIT_STR(open_br, "{"), \
     INIT_STR(percent, "%"), \
     INIT_STR(shim_name, "<shim>"), \
+    INIT_STR(type_params, ".type_params"), \
     INIT_STR(utf_8, "utf-8"), \
 }
 
@@ -717,6 +722,7 @@ extern "C" {
     INIT_ID(__subclasshook__), \
     INIT_ID(__truediv__), \
     INIT_ID(__trunc__), \
+    INIT_ID(__type_params__), \
     INIT_ID(__typing_is_unpacked_typevartuple__), \
     INIT_ID(__typing_prepare_subst__), \
     INIT_ID(__typing_subst__), \
@@ -772,8 +778,11 @@ extern "C" {
     INIT_ID(after_in_child), \
     INIT_ID(after_in_parent), \
     INIT_ID(aggregate_class), \
+    INIT_ID(alias), \
     INIT_ID(append), \
+    INIT_ID(arg), \
     INIT_ID(argdefs), \
+    INIT_ID(args), \
     INIT_ID(arguments), \
     INIT_ID(argv), \
     INIT_ID(as_integer_ratio), \
@@ -788,6 +797,7 @@ extern "C" {
     INIT_ID(big), \
     INIT_ID(binary_form), \
     INIT_ID(block), \
+    INIT_ID(bound), \
     INIT_ID(buffer), \
     INIT_ID(buffer_callback), \
     INIT_ID(buffer_size), \
@@ -842,11 +852,13 @@ extern "C" {
     INIT_ID(comment_factory), \
     INIT_ID(consts), \
     INIT_ID(context), \
+    INIT_ID(contravariant), \
     INIT_ID(cookie), \
     INIT_ID(copy), \
     INIT_ID(copyreg), \
     INIT_ID(coro), \
     INIT_ID(count), \
+    INIT_ID(covariant), \
     INIT_ID(cwd), \
     INIT_ID(d), \
     INIT_ID(data), \
@@ -885,6 +897,7 @@ extern "C" {
     INIT_ID(end_lineno), \
     INIT_ID(end_offset), \
     INIT_ID(endpos), \
+    INIT_ID(entrypoint), \
     INIT_ID(env), \
     INIT_ID(errors), \
     INIT_ID(event), \
@@ -954,6 +967,7 @@ extern "C" {
     INIT_ID(incoming), \
     INIT_ID(indexgroup), \
     INIT_ID(inf), \
+    INIT_ID(infer_variance), \
     INIT_ID(inheritable), \
     INIT_ID(initial), \
     INIT_ID(initial_bytes), \
@@ -1068,6 +1082,7 @@ extern "C" {
     INIT_ID(optimize), \
     INIT_ID(options), \
     INIT_ID(order), \
+    INIT_ID(origin), \
     INIT_ID(out_fd), \
     INIT_ID(outgoing), \
     INIT_ID(overlapped), \
