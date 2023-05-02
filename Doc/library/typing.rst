@@ -1450,7 +1450,7 @@ These are not used in annotations. They are building blocks for creating generic
 
    .. versionadded:: 3.11
 
-.. class:: ParamSpec(name, *, bound=None covariant=False, contravariant=False)
+.. class:: ParamSpec(name, *, bound=None, covariant=False, contravariant=False)
 
    Parameter specification variable.  A specialized version of
    :class:`type variables <TypeVar>`.
