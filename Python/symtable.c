@@ -1184,15 +1184,6 @@ symtable_enter_typeparam_block(struct symtable *st, identifier name,
         if (!symtable_add_def(st, &_Py_ID(__classdict__), USE, lineno, col_offset, end_lineno, end_col_offset)) {
             return 0;
         }
-        _Py_DECLARE_STR(class_dict, ".class_dict");
-        if (!symtable_add_def(st, &_Py_STR(class_dict),
-                              DEF_PARAM, lineno, col_offset, end_lineno, end_col_offset)) {
-            return 0;
-        }
-        if (!symtable_add_def(st, &_Py_STR(class_dict),
-                              USE, lineno, col_offset, end_lineno, end_col_offset)) {
-            return 0;
-        }
     }
     if (kind == AsyncFunctionDef_kind || kind == FunctionDef_kind || kind == ClassDef_kind) {
         _Py_DECLARE_STR(type_params, ".type_params");
