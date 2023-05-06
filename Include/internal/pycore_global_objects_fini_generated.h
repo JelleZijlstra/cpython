@@ -606,6 +606,8 @@ _PyStaticObjects_CheckRefcnt(PyInterpreterState *interp) {
     _PyStaticObject_CheckRefcnt((PyObject *)&_Py_ID(__class__));
     _PyStaticObject_CheckRefcnt((PyObject *)&_Py_ID(__class_getitem__));
     _PyStaticObject_CheckRefcnt((PyObject *)&_Py_ID(__classcell__));
+    _PyStaticObject_CheckRefcnt((PyObject *)&_Py_ID(__classdict__));
+    _PyStaticObject_CheckRefcnt((PyObject *)&_Py_ID(__classdictcell__));
     _PyStaticObject_CheckRefcnt((PyObject *)&_Py_ID(__complex__));
     _PyStaticObject_CheckRefcnt((PyObject *)&_Py_ID(__contains__));
     _PyStaticObject_CheckRefcnt((PyObject *)&_Py_ID(__copy__));

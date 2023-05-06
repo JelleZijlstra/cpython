@@ -600,6 +600,8 @@ extern "C" {
     INIT_ID(__class__), \
     INIT_ID(__class_getitem__), \
     INIT_ID(__classcell__), \
+    INIT_ID(__classdict__), \
+    INIT_ID(__classdictcell__), \
     INIT_ID(__complex__), \
     INIT_ID(__contains__), \
     INIT_ID(__copy__), \
