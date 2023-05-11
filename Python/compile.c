@@ -386,6 +386,8 @@ struct compiler_unit {
     instr_sequence u_instr_sequence; /* codegen output */
 
     int u_nfblocks;
+    bool u_in_inlined_comprehension;
+
     struct fblockinfo u_fblock[CO_MAXBLOCKS];
 
     _PyCompile_CodeUnitMetadata u_metadata;
@@ -1266,6 +1268,7 @@ compiler_enter_scope(struct compiler *c, identifier name,
     }
 
     u->u_nfblocks = 0;
+    u->u_in_inlined_comprehension = false;
     u->u_metadata.u_firstlineno = lineno;
     u->u_metadata.u_consts = PyDict_New();
     if (!u->u_metadata.u_consts) {
@@ -3770,7 +3773,7 @@ compiler_nameop(struct compiler *c, location loc,
         break;
     case OP_NAME:
         switch (ctx) {
-        case Load: op = LOAD_NAME; break;
+        case Load: op = c->u->u_in_inlined_comprehension ? LOAD_GLOBAL : LOAD_NAME; break;
         case Store: op = STORE_NAME; break;
         case Del: op = DELETE_NAME; break;
         }
@@ -4988,6 +4991,7 @@ typedef struct {
     PyObject *pushed_locals;
     PyObject *temp_symbols;
     PyObject *fast_hidden;
+    bool already_in_comprehension;
 } inlined_comprehension_state;
 
 static int
@@ -4995,6 +4999,8 @@ push_inlined_comprehension_state(struct compiler *c, location loc,
                                  PySTEntryObject *entry,
                                  inlined_comprehension_state *state)
 {
+    state->already_in_comprehension = c->u->u_in_inlined_comprehension;
+    c->u->u_in_inlined_comprehension = true;
     // iterate over names bound in the comprehension and ensure we isolate
     // them from the outer scope as needed
     PyObject *k, *v;
@@ -5094,6 +5100,7 @@ static int
 pop_inlined_comprehension_state(struct compiler *c, location loc,
                                 inlined_comprehension_state state)
 {
+    c->u->u_in_inlined_comprehension = state.already_in_comprehension;
     PyObject *k, *v;
     Py_ssize_t pos = 0;
     if (state.temp_symbols) {
@@ -5137,6 +5144,7 @@ pop_inlined_comprehension_state(struct compiler *c, location loc,
         }
         Py_CLEAR(state.fast_hidden);
     }
+    c->u->u_in_inlined_comprehension = state.already_in_comprehension;
     return SUCCESS;
 }
 

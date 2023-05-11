@@ -320,6 +320,19 @@ class ListComprehensionTest(unittest.TestCase):
         with self.assertRaises(UnboundLocalError):
             f()
 
+    def test_unbound_local_in_class_scope(self):
+        class X:
+            y = 1
+            with self.assertRaises(NameError):
+                [x + y for x in range(2)]
+
+    def test_comprehension_in_class_scope(self):
+        y = 1
+        class X:
+            y = 2
+            vals = [(x, y) for x in range(2)]
+        self.assertEqual(X.vals, [(0, 1), (1, 1)])
+
 
 __test__ = {'doctests' : doctests}
 
