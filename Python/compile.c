@@ -386,7 +386,7 @@ struct compiler_unit {
     instr_sequence u_instr_sequence; /* codegen output */
 
     int u_nfblocks;
-    bool u_in_inlined_comprehension;
+    PySTEntryObject *u_inlined_comp_ste;
 
     struct fblockinfo u_fblock[CO_MAXBLOCKS];
 
@@ -1268,7 +1268,7 @@ compiler_enter_scope(struct compiler *c, identifier name,
     }
 
     u->u_nfblocks = 0;
-    u->u_in_inlined_comprehension = false;
+    u->u_inlined_comp_ste = NULL;
     u->u_metadata.u_firstlineno = lineno;
     u->u_metadata.u_consts = PyDict_New();
     if (!u->u_metadata.u_consts) {
@@ -3716,7 +3716,12 @@ compiler_nameop(struct compiler *c, location loc,
 
     op = 0;
     optype = OP_NAME;
-    scope = _PyST_GetScope(c->u->u_ste, mangled);
+    if (c->u->u_ste->ste_type == ClassBlock && c->u->u_inlined_comp_ste != NULL) {
+        scope = _PyST_GetScope(c->u->u_inlined_comp_ste, mangled);
+    }
+    else {
+        scope = _PyST_GetScope(c->u->u_ste, mangled);
+    }
     switch (scope) {
     case FREE:
         dict = c->u->u_metadata.u_freevars;
@@ -3773,7 +3778,7 @@ compiler_nameop(struct compiler *c, location loc,
         break;
     case OP_NAME:
         switch (ctx) {
-        case Load: op = c->u->u_in_inlined_comprehension ? LOAD_GLOBAL : LOAD_NAME; break;
+        case Load: op = LOAD_NAME; break;
         case Store: op = STORE_NAME; break;
         case Del: op = DELETE_NAME; break;
         }
@@ -4991,7 +4996,7 @@ typedef struct {
     PyObject *pushed_locals;
     PyObject *temp_symbols;
     PyObject *fast_hidden;
-    bool already_in_comprehension;
+    PySTEntryObject *previous_comp_ste;
 } inlined_comprehension_state;
 
 static int
@@ -4999,8 +5004,8 @@ push_inlined_comprehension_state(struct compiler *c, location loc,
                                  PySTEntryObject *entry,
                                  inlined_comprehension_state *state)
 {
-    state->already_in_comprehension = c->u->u_in_inlined_comprehension;
-    c->u->u_in_inlined_comprehension = true;
+    state->previous_comp_ste = (PySTEntryObject *)Py_XNewRef(c->u->u_inlined_comp_ste);
+    Py_XSETREF(c->u->u_inlined_comp_ste, (PySTEntryObject *)Py_NewRef(entry));
     // iterate over names bound in the comprehension and ensure we isolate
     // them from the outer scope as needed
     PyObject *k, *v;
@@ -5100,7 +5105,9 @@ static int
 pop_inlined_comprehension_state(struct compiler *c, location loc,
                                 inlined_comprehension_state state)
 {
-    c->u->u_in_inlined_comprehension = state.already_in_comprehension;
+    // transfer ownership
+    Py_XDECREF(c->u->u_inlined_comp_ste);
+    c->u->u_inlined_comp_ste = state.previous_comp_ste;
     PyObject *k, *v;
     Py_ssize_t pos = 0;
     if (state.temp_symbols) {
@@ -5144,7 +5151,6 @@ pop_inlined_comprehension_state(struct compiler *c, location loc,
         }
         Py_CLEAR(state.fast_hidden);
     }
-    c->u->u_in_inlined_comprehension = state.already_in_comprehension;
     return SUCCESS;
 }
 
