@@ -3716,12 +3716,7 @@ compiler_nameop(struct compiler *c, location loc,
 
     op = 0;
     optype = OP_NAME;
-    if (c->u->u_ste->ste_type == ClassBlock && c->u->u_inlined_comp_ste != NULL) {
-        scope = _PyST_GetScope(c->u->u_inlined_comp_ste, mangled);
-    }
-    else {
-        scope = _PyST_GetScope(c->u->u_ste, mangled);
-    }
+    scope = _PyST_GetScope(c->u->u_ste, mangled);
     switch (scope) {
     case FREE:
         dict = c->u->u_metadata.u_freevars;
@@ -3755,7 +3750,7 @@ compiler_nameop(struct compiler *c, location loc,
     case OP_DEREF:
         switch (ctx) {
         case Load:
-            op = (c->u->u_ste->ste_type == ClassBlock) ? LOAD_CLASSDEREF : LOAD_DEREF;
+            op = (c->u->u_ste->ste_type == ClassBlock && !c->u->u_inlined_comp_ste) ? LOAD_CLASSDEREF : LOAD_DEREF;
             break;
         case Store: op = STORE_DEREF; break;
         case Del: op = DELETE_DEREF; break;
@@ -3778,7 +3773,7 @@ compiler_nameop(struct compiler *c, location loc,
         break;
     case OP_NAME:
         switch (ctx) {
-        case Load: op = LOAD_NAME; break;
+        case Load: op = (c->u->u_ste->ste_type == ClassBlock && c->u->u_inlined_comp_ste) ? LOAD_GLOBAL : LOAD_NAME; break;
         case Store: op = STORE_NAME; break;
         case Del: op = DELETE_NAME; break;
         }
