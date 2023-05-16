@@ -675,7 +675,7 @@ inline_comprehension(PySTEntryObject *ste, PySTEntryObject *comp,
 
                 // free vars in comprehension that are locals in outer scope can
                 // now simply be locals, unless they are free in comp children
-                if (!is_free_in_any_child(comp, k)) {
+                if (!is_free_in_any_child(comp, k) && ste->ste_type != ClassBlock) {
                     if (PySet_Discard(comp_free, k) < 0) {
                         return 0;
                     }
