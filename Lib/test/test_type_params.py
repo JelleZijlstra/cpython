@@ -136,6 +136,9 @@ class TypeParamsInvalidTest(unittest.TestCase):
         check_syntax_error(self, "class X[T: (y := 3)]: pass")
         check_syntax_error(self, "class X[T](y := Sequence[T]): pass")
         check_syntax_error(self, "def f[T](y: (x := Sequence[T])): pass")
+        check_syntax_error(self, "class X[T]([(x := 3) for _ in range(2)] and B): pass")
+        check_syntax_error(self, "def f[T: [(x := 3) for _ in range(2)]](): pass")
+        check_syntax_error(self, "type T = [(x := 3) for _ in range(2)]")
 
 
 class TypeParamsNonlocalTest(unittest.TestCase):
@@ -844,5 +847,5 @@ class TypeParamsTypeParamsDunder(unittest.TestCase):
             func.__type_params__ = ()
         """
 
-        with self.assertRaisesRegex(AttributeError, "attribute '__type_params__' of 'function' objects is not writable"):
-            run_code(code)
+        ns = run_code(code)
+        self.assertEqual(ns["func"].__type_params__, ())
