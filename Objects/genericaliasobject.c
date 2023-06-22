@@ -231,7 +231,6 @@ _Py_make_parameters(PyObject *args)
             bool does_not_contain = tuple_index(parameters, nargs, t) == -1;
             if (does_not_contain) {
                 if (_PyObject_LookupAttr(t, &_Py_ID(__default__), &default_) < 0) {
-                    Py_DECREF(default_);
                     Py_DECREF(subst);
                     return NULL;
                 }
@@ -244,6 +243,7 @@ _Py_make_parameters(PyObject *args)
                         t
                     );
                 }
+                Py_DECREF(default_);
             }
 
             iparam += tuple_add(parameters, iparam, t);
@@ -273,7 +273,6 @@ _Py_make_parameters(PyObject *args)
                     bool does_not_contain = tuple_index(parameters, nargs, t2) == -1;
                     if (does_not_contain) {
                         if (_PyObject_LookupAttr(t2, &_Py_ID(__default__), &default_) < 0) {
-                            Py_DECREF(default_);
                             Py_DECREF(subst);
                             return NULL;
                         }
@@ -286,6 +285,7 @@ _Py_make_parameters(PyObject *args)
                                 t2
                             );
                         }
+                        Py_DECREF(default_);
                     }
                     iparam += tuple_add(parameters, iparam, t2);
                 }
