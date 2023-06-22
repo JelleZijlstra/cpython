@@ -828,6 +828,14 @@ class UnionTests(unittest.TestCase):
         self.assertEqual((list[T] | list[S])[int, T], list[int] | list[T])
         self.assertEqual((list[T] | list[S])[int, int], list[int])
 
+    def test_union_parameter_default_ordering(self):
+        T = typing.TypeVar("T")
+        U = typing.TypeVar("U", default=int)
+
+        self.assertEqual((list[U] | list[T]).__parameters__, (U, T))
+        with self.assertRaises(TypeError):
+            list[U] | list[T]
+
     def test_union_parameter_substitution(self):
         def eq(actual, expected, typed=True):
             self.assertEqual(actual, expected)
@@ -995,6 +1003,18 @@ class UnionTests(unittest.TestCase):
                     isinstance(1, type_)
                 with self.assertRaises(TypeError):
                     issubclass(int, type_)
+
+    def test_generic_alias_subclass_with_defaults(self):
+        T = typing.TypeVar("T")
+        U = typing.TypeVar("U", default=int)
+        class MyGeneric:
+            __class_getitem__ = classmethod(types.GenericAlias)
+
+        class Fine(MyGeneric[T, U]):
+            ...
+
+        with self.assertRaises(TypeError):
+            class NonDefaultFollows(MyGeneric[U, T]): ...
 
     def test_or_type_operator_with_bad_module(self):
         class BadMeta(type):

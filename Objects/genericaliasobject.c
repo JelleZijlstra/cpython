@@ -214,6 +214,7 @@ _Py_make_parameters(PyObject *args)
     if (parameters == NULL)
         return NULL;
     Py_ssize_t iparam = 0;
+    bool seen_default = false;
     for (Py_ssize_t iarg = 0; iarg < nargs; iarg++) {
         PyObject *t = PyTuple_GET_ITEM(args, iarg);
         PyObject *subst;
@@ -226,6 +227,25 @@ _Py_make_parameters(PyObject *args)
             return NULL;
         }
         if (subst) {
+            PyObject *default_;
+            bool does_not_contain = tuple_index(parameters, nargs, t) == -1;
+            if (does_not_contain) {
+                if (_PyObject_LookupAttr(t, &_Py_ID(__default__), &default_) < 0) {
+                    Py_DECREF(subst);
+                    return NULL;
+                }
+                if (!Py_IsNone(default_)) {
+                    seen_default = true;
+                } else if (seen_default) {
+                    return PyErr_Format(
+                        PyExc_TypeError,
+                        "non-default type parameter %R follows default type parameter",
+                        t
+                    );
+                }
+                Py_DECREF(default_);
+            }
+
             iparam += tuple_add(parameters, iparam, t);
             Py_DECREF(subst);
         }
@@ -248,7 +268,25 @@ _Py_make_parameters(PyObject *args)
                     }
                 }
                 for (Py_ssize_t j = 0; j < len2; j++) {
+                    PyObject *default_;
                     PyObject *t2 = PyTuple_GET_ITEM(subparams, j);
+                    bool does_not_contain = tuple_index(parameters, nargs, t2) == -1;
+                    if (does_not_contain) {
+                        if (_PyObject_LookupAttr(t2, &_Py_ID(__default__), &default_) < 0) {
+                            Py_DECREF(subst);
+                            return NULL;
+                        }
+                        if (default_ && !Py_IsNone(default_)) {
+                            seen_default = true;
+                        } else if (seen_default) {
+                            return PyErr_Format(
+                                PyExc_TypeError,
+                                "non-default type parameter %R follows default type parameter",
+                                t2
+                            );
+                        }
+                        Py_DECREF(default_);
+                    }
                     iparam += tuple_add(parameters, iparam, t2);
                 }
             }

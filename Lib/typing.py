@@ -260,6 +260,7 @@ def _collect_parameters(args):
         _collect_parameters((T, Callable[P, T])) == (T, P)
     """
     parameters = []
+    seen_default = False
     for t in args:
         if isinstance(t, type):
             # We don't want __parameters__ descriptor of a bare Python class.
@@ -273,10 +274,24 @@ def _collect_parameters(args):
                         parameters.append(collected)
         elif hasattr(t, '__typing_subst__'):
             if t not in parameters:
+                if hasattr(t, "__default__") and t.__default__ is not None:
+                    seen_default = True
+                elif seen_default:
+                    raise TypeError(
+                        f"non-default type parameter {t!r} follows default type parameter"
+                    )
+
                 parameters.append(t)
         else:
             for x in getattr(t, '__parameters__', ()):
                 if x not in parameters:
+                    if hasattr(x, "__default__") and x.__default__ is not None:
+                        seen_default = True
+                    elif seen_default:
+                        raise TypeError(
+                            f"non-default type parameter {x!r} follows default type parameter"
+                        )
+
                     parameters.append(x)
     return tuple(parameters)
 

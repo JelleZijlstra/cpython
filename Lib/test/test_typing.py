@@ -444,6 +444,22 @@ class TypeVarTests(BaseTestCase):
         with self.assertRaises(TypeError):
             TypeVar('X', str, float, bound=Employee)
 
+    def test_default_error(self):
+        with self.assertRaises(TypeError):
+            TypeVar('X', default=Union)
+
+    def test_default_ordering(self):
+        T = TypeVar("T")
+        U = TypeVar("U", default=int)
+        V = TypeVar("V", default=float)
+
+        class Foo(Generic[T, U]): ...
+        with self.assertRaises(TypeError):
+            class Bar(Generic[U, T]): ...
+
+        class Baz(Foo[V]): ...
+
+
     def test_missing__name__(self):
         # See bpo-39942
         code = ("import typing\n"
@@ -3971,7 +3987,8 @@ class GenericTests(BaseTestCase):
         TPB = TypeVar('TPB', bound=int)
         TPV = TypeVar('TPV', bytes, str)
         PP = ParamSpec('PP')
-        for X in [TP, TPB, TPV, PP,
+        TD = TypeVar('TD', default=int)
+        for X in [TP, TPB, TPV, PP, TD,
                   List, typing.Mapping, ClassVar, typing.Iterable,
                   Union, Any, Tuple, Callable]:
             with self.subTest(thing=X):
@@ -3979,14 +3996,15 @@ class GenericTests(BaseTestCase):
                 self.assertIs(deepcopy(X), X)
                 for proto in range(pickle.HIGHEST_PROTOCOL + 1):
                     self.assertIs(pickle.loads(pickle.dumps(X, proto)), X)
-        del TP, TPB, TPV, PP
+        del TP, TPB, TPV, PP, TD
 
         # Check that local type variables are copyable.
         TL = TypeVar('TL')
         TLB = TypeVar('TLB', bound=int)
         TLV = TypeVar('TLV', bytes, str)
         PL = ParamSpec('PL')
-        for X in [TL, TLB, TLV, PL]:
+        TDL = TypeVar('TDL', default=int)
+        for X in [TL, TLB, TLV, PL, TDL]:
             with self.subTest(thing=X):
                 self.assertIs(copy(X), X)
                 self.assertIs(deepcopy(X), X)
