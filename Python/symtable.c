@@ -784,7 +784,7 @@ drop_class_free(PySTEntryObject *ste, PyObject *free)
 static int
 update_symbols(PyObject *symbols, PyObject *scopes,
                PyObject *bound, PyObject *free,
-               PyObject *inlined_cells, int classflag)
+               PyObject *inlined_cells, int classflag, int can_see_class_scope)
 {
     PyObject *name = NULL, *itr = NULL;
     PyObject *v = NULL, *v_scope = NULL, *v_new = NULL, *v_free = NULL;
@@ -836,7 +836,11 @@ update_symbols(PyObject *symbols, PyObject *scopes,
                the class that has the same name as a local
                or global in the class scope.
             */
-            if  (classflag &&
+            if (can_see_class_scope) {
+                printf("name: %s, v: %ld\n", PyUnicode_AsUTF8(PyObject_Str(name)), PyLong_AS_LONG(v));
+                continue;
+            }
+            if (classflag &&
                  PyLong_AS_LONG(v) & (DEF_BOUND | DEF_GLOBAL)) {
                 long flags = PyLong_AS_LONG(v) | DEF_FREE_CLASS;
                 v_new = PyLong_FromLong(flags);
@@ -1077,14 +1081,18 @@ analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free,
     else if (ste->ste_type == ClassBlock && !drop_class_free(ste, newfree))
         goto error;
     /* Records the results of the analysis in the symbol table entry */
+    printf("update symbols for %s %d\n", PyUnicode_AsUTF8(PyObject_Str(ste->ste_name)), ste->ste_type);
     if (!update_symbols(ste->ste_symbols, scopes, bound, newfree, inlined_cells,
-                        ste->ste_type == ClassBlock))
+                        ste->ste_type == ClassBlock, ste->ste_can_see_class_scope))
         goto error;
 
-    temp = PyNumber_InPlaceOr(free, newfree);
-    if (!temp)
-        goto error;
-    Py_DECREF(temp);
+    if (!ste->ste_can_see_class_scope) {
+        temp = PyNumber_InPlaceOr(free, newfree);
+        if (!temp)
+            goto error;
+        Py_DECREF(temp);
+    }
+    printf("symbol table %s %s\n", PyUnicode_AsUTF8(PyObject_Str(ste->ste_symbols)), PyUnicode_AsUTF8(PyObject_Str(ste->ste_varnames)));
     success = 1;
  error:
     Py_XDECREF(scopes);
