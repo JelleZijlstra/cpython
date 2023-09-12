@@ -1301,6 +1301,7 @@ compiler_enter_scope(struct compiler *c, identifier name,
         compiler_unit_free(u);
         return ERROR;
     }
+    printf("ENTER SCOPE %s %s\n", PyUnicode_AsUTF8(name), PyUnicode_AsUTF8(PyObject_Str(u->u_ste->ste_symbols)));
     u->u_metadata.u_name = Py_NewRef(name);
     u->u_metadata.u_varnames = list2dict(u->u_ste->ste_varnames);
     if (!u->u_metadata.u_varnames) {
@@ -1339,6 +1340,7 @@ compiler_enter_scope(struct compiler *c, identifier name,
         compiler_unit_free(u);
         return ERROR;
     }
+    printf("got freevars %s, cellvars %s, varnames %s\n", PyUnicode_AsUTF8(PyObject_Str(u->u_metadata.u_freevars)), PyUnicode_AsUTF8(PyObject_Str(u->u_metadata.u_cellvars)), PyUnicode_AsUTF8(PyObject_Str(u->u_metadata.u_varnames)));
 
     u->u_metadata.u_fasthidden = PyDict_New();
     if (!u->u_metadata.u_fasthidden) {
@@ -1854,6 +1856,7 @@ compiler_make_closure(struct compiler *c, location loc,
                LOAD_DEREF but LOAD_CLOSURE is needed.
             */
             PyObject *name = PyTuple_GET_ITEM(co->co_localsplusnames, i);
+            printf("make closure %d %s %s\n", i, PyUnicode_AsUTF8(name), PyUnicode_AsUTF8(PyObject_Str(co->co_localsplusnames)));
 
             /* Special case: If a class contains a method with a
                free variable that has the same name as a method,
@@ -1873,16 +1876,18 @@ compiler_make_closure(struct compiler *c, location loc,
                 arg = compiler_lookup_arg(c->u->u_metadata.u_freevars, name);
             }
             if (arg == -1) {
+                printf("now freevars=%s, cellvars=%s\n", PyUnicode_AsUTF8(PyObject_Str(c->u->u_metadata.u_freevars)), PyUnicode_AsUTF8(PyObject_Str(c->u->u_metadata.u_cellvars)));
                 PyObject *freevars = _PyCode_GetFreevars(co);
                 if (freevars == NULL) {
                     PyErr_Clear();
                 }
                 PyErr_Format(PyExc_SystemError,
-                    "compiler_lookup_arg(name=%R) with reftype=%d failed in %S; "
+                    "compiler_lookup_arg(name=%R) with reftype=%d failed in %S of type %d; "
                     "freevars of code %S: %R",
                     name,
                     reftype,
                     c->u->u_metadata.u_name,
+                    c->u->u_scope_type,
                     co->co_name,
                     freevars);
                 Py_DECREF(freevars);
@@ -7643,7 +7648,9 @@ optimize_and_assemble(struct compiler *c, int addNone)
         return NULL;
     }
 
-    return optimize_and_assemble_code_unit(u, const_cache, code_flags, filename);
+    PyCodeObject *co = optimize_and_assemble_code_unit(u, const_cache, code_flags, filename);
+    printf("finish optimize_and_assemble %s\n", PyUnicode_AsUTF8(co->co_name));
+    return co;
 }
 
 /* Access to compiler optimizations for unit tests.

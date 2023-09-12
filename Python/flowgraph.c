@@ -2565,6 +2565,7 @@ prepare_localsplus(_PyCompile_CodeUnitMetadata *umd, cfg_builder *g, int code_fl
     int nlocals = (int)PyDict_GET_SIZE(umd->u_varnames);
     int ncellvars = (int)PyDict_GET_SIZE(umd->u_cellvars);
     int nfreevars = (int)PyDict_GET_SIZE(umd->u_freevars);
+    printf("LOCALSPLUS varnames=%s, cellvars=%s, freevars=%s\n", PyUnicode_AsUTF8(PyObject_Str(umd->u_varnames)), PyUnicode_AsUTF8(PyObject_Str(umd->u_cellvars)), PyUnicode_AsUTF8(PyObject_Str(umd->u_freevars)));
     assert(INT_MAX - nlocals - ncellvars > 0);
     assert(INT_MAX - nlocals - ncellvars - nfreevars > 0);
     int nlocalsplus = nlocals + ncellvars + nfreevars;

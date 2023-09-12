@@ -598,6 +598,7 @@ analyze_name(PySTEntryObject *ste, PyObject *scopes, PyObject *name, long flags,
             return 1;
         }
         else if (class_flags & DEF_BOUND && !(class_flags & DEF_NONLOCAL)) {
+            printf("set GLOBAL_IMPLICIT case 1 for %s in %s (%d)\n", PyUnicode_AsUTF8(name), PyUnicode_AsUTF8(ste->ste_name), ste->ste_type);
             SET_SCOPE(scopes, name, GLOBAL_IMPLICIT);
             return 1;
         }
@@ -627,12 +628,14 @@ analyze_name(PySTEntryObject *ste, PyObject *scopes, PyObject *name, long flags,
             return 0;
         }
         if (contains) {
+            printf("set GLOBAL_IMPLICIT case 2 for %s in %s (%d)\n", PyUnicode_AsUTF8(name), PyUnicode_AsUTF8(ste->ste_name), ste->ste_type);
             SET_SCOPE(scopes, name, GLOBAL_IMPLICIT);
             return 1;
         }
     }
     if (ste->ste_nested)
         ste->ste_free = 1;
+    printf("set GLOBAL_IMPLICIT case 3 for %s in %s (%d)\n", PyUnicode_AsUTF8(name), PyUnicode_AsUTF8(ste->ste_name), ste->ste_type);
     SET_SCOPE(scopes, name, GLOBAL_IMPLICIT);
     return 1;
 }
