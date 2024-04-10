@@ -811,15 +811,15 @@ static PyObject* ast2obj_type_param(struct ast_state *state, struct validator
 static const char * const TypeVar_fields[]={
     "name",
     "bound",
-    "default_",
+    "default",
 };
 static const char * const ParamSpec_fields[]={
     "name",
-    "default_",
+    "default",
 };
 static const char * const TypeVarTuple_fields[]={
     "name",
-    "default_",
+    "default",
 };
 
 
@@ -4926,7 +4926,7 @@ add_ast_annotations(struct ast_state *state)
             Py_DECREF(TypeVar_annotations);
             return 0;
         }
-        cond = PyDict_SetItemString(TypeVar_annotations, "default_", type) == 0;
+        cond = PyDict_SetItemString(TypeVar_annotations, "default", type) == 0;
         Py_DECREF(type);
         if (!cond) {
             Py_DECREF(TypeVar_annotations);
@@ -4966,7 +4966,7 @@ add_ast_annotations(struct ast_state *state)
             Py_DECREF(ParamSpec_annotations);
             return 0;
         }
-        cond = PyDict_SetItemString(ParamSpec_annotations, "default_", type) ==
+        cond = PyDict_SetItemString(ParamSpec_annotations, "default", type) ==
                                     0;
         Py_DECREF(type);
         if (!cond) {
@@ -5008,7 +5008,7 @@ add_ast_annotations(struct ast_state *state)
             Py_DECREF(TypeVarTuple_annotations);
             return 0;
         }
-        cond = PyDict_SetItemString(TypeVarTuple_annotations, "default_", type)
+        cond = PyDict_SetItemString(TypeVarTuple_annotations, "default", type)
                                     == 0;
         Py_DECREF(type);
         if (!cond) {
@@ -6295,15 +6295,15 @@ init_types(struct ast_state *state)
     if (!state->TypeIgnore_type) return -1;
     state->type_param_type = make_type(state, "type_param", state->AST_type,
                                        NULL, 0,
-        "type_param = TypeVar(identifier name, expr? bound, expr? default_)\n"
-        "           | ParamSpec(identifier name, expr? default_)\n"
-        "           | TypeVarTuple(identifier name, expr? default_)");
+        "type_param = TypeVar(identifier name, expr? bound, expr? default)\n"
+        "           | ParamSpec(identifier name, expr? default)\n"
+        "           | TypeVarTuple(identifier name, expr? default)");
     if (!state->type_param_type) return -1;
     if (add_attributes(state, state->type_param_type, type_param_attributes, 4)
         < 0) return -1;
     state->TypeVar_type = make_type(state, "TypeVar", state->type_param_type,
                                     TypeVar_fields, 3,
-        "TypeVar(identifier name, expr? bound, expr? default_)");
+        "TypeVar(identifier name, expr? bound, expr? default)");
     if (!state->TypeVar_type) return -1;
     if (PyObject_SetAttr(state->TypeVar_type, state->bound, Py_None) == -1)
         return -1;
@@ -6312,14 +6312,14 @@ init_types(struct ast_state *state)
     state->ParamSpec_type = make_type(state, "ParamSpec",
                                       state->type_param_type, ParamSpec_fields,
                                       2,
-        "ParamSpec(identifier name, expr? default_)");
+        "ParamSpec(identifier name, expr? default)");
     if (!state->ParamSpec_type) return -1;
     if (PyObject_SetAttr(state->ParamSpec_type, state->default_, Py_None) == -1)
         return -1;
     state->TypeVarTuple_type = make_type(state, "TypeVarTuple",
                                          state->type_param_type,
                                          TypeVarTuple_fields, 2,
-        "TypeVarTuple(identifier name, expr? default_)");
+        "TypeVarTuple(identifier name, expr? default)");
     if (!state->TypeVarTuple_type) return -1;
     if (PyObject_SetAttr(state->TypeVarTuple_type, state->default_, Py_None) ==
         -1)
