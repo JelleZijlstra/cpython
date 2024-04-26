@@ -1030,12 +1030,14 @@ error:
 static int
 analyze_child_block(PySTEntryObject *entry, PyObject *bound, PyObject *free,
                     PyObject *global, PyObject *type_params,
-                    PySTEntryObject *class_entry, PyObject **child_free);
+                    PySTEntryObject *class_entry, PyObject **child_free,
+                    PyObject *class_scopes, PyObject *class_inlined_cells);
 
 static int
 analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free,
               PyObject *global, PyObject *type_params,
-              PySTEntryObject *class_entry)
+              PySTEntryObject *class_entry,
+              PyObject *class_scopes, PyObject *class_inlined_cells)
 {
     PyObject *name, *v, *local = NULL, *scopes = NULL, *newbound = NULL;
     PyObject *newglobal = NULL, *newfree = NULL, *inlined_cells = NULL;
@@ -1145,12 +1147,18 @@ analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free,
         entry = (PySTEntryObject*)c;
 
         PySTEntryObject *new_class_entry = NULL;
+        PyObject *new_class_inlined_cells = NULL;
+        PyObject *new_class_scopes = NULL;
         if (entry->ste_can_see_class_scope) {
             if (ste->ste_type == ClassBlock) {
                 new_class_entry = ste;
+                new_class_inlined_cells = inlined_cells;
+                new_class_scopes = scopes;
             }
             else if (class_entry) {
                 new_class_entry = class_entry;
+                new_class_inlined_cells = class_inlined_cells;
+                new_class_scopes = class_scopes;
             }
         }
 
@@ -1158,16 +1166,22 @@ analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free,
         // except those in annotation scopes that are nested in classes
         int inline_comp =
             entry->ste_comprehension &&
-            !entry->ste_generator &&
-            !ste->ste_can_see_class_scope;
+            !entry->ste_generator;
 
         if (!analyze_child_block(entry, newbound, newfree, newglobal,
-                                 type_params, new_class_entry, &child_free))
+                                 type_params, new_class_entry, &child_free,
+                                 new_class_scopes, new_class_inlined_cells))
         {
             goto error;
         }
         if (inline_comp) {
-            if (!inline_comprehension(ste, entry, scopes, child_free, inlined_cells)) {
+            if (!inline_comprehension(
+                ste->ste_can_see_class_scope ? class_entry : ste,
+                entry,
+                ste->ste_can_see_class_scope ? class_scopes : scopes,
+                child_free,
+                ste->ste_can_see_class_scope ? class_inlined_cells : inlined_cells
+            )) {
                 Py_DECREF(child_free);
                 goto error;
             }
@@ -1189,11 +1203,20 @@ analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free,
         PySTEntryObject* entry;
         assert(c && PySTEntry_Check(c));
         entry = (PySTEntryObject*)c;
-        if (entry->ste_comp_inlined &&
-            PyList_SetSlice(ste->ste_children, i, i + 1,
-                            entry->ste_children) < 0)
-        {
-            goto error;
+        if (entry->ste_comp_inlined) {
+            if (ste->ste_can_see_class_scope) {
+                if (PyList_SetSlice(ste->ste_children, i, i + 1, NULL) < 0) {
+                    goto error;
+                }
+                if (PyList_Extend(class_entry->ste_children, entry->ste_children) < 0) {
+                    goto error;
+                }
+            }
+            else {
+                if (PyList_SetSlice(ste->ste_children, i, i + 1, entry->ste_children) < 0) {
+                    goto error;
+                }
+            }
         }
     }
 
@@ -1227,7 +1250,8 @@ analyze_block(PySTEntryObject *ste, PyObject *bound, PyObject *free,
 static int
 analyze_child_block(PySTEntryObject *entry, PyObject *bound, PyObject *free,
                     PyObject *global, PyObject *type_params,
-                    PySTEntryObject *class_entry, PyObject** child_free)
+                    PySTEntryObject *class_entry, PyObject** child_free,
+                    PyObject *class_scopes, PyObject *class_inlined_cells)
 {
     PyObject *temp_bound = NULL, *temp_global = NULL, *temp_free = NULL;
     PyObject *temp_type_params = NULL;
@@ -1253,7 +1277,7 @@ analyze_child_block(PySTEntryObject *entry, PyObject *bound, PyObject *free,
         goto error;
 
     if (!analyze_block(entry, temp_bound, temp_free, temp_global,
-                       temp_type_params, class_entry))
+                       temp_type_params, class_entry, class_scopes, class_inlined_cells))
         goto error;
     *child_free = temp_free;
     Py_DECREF(temp_bound);
@@ -1288,7 +1312,7 @@ symtable_analyze(struct symtable *st)
         Py_DECREF(global);
         return 0;
     }
-    r = analyze_block(st->st_top, NULL, free, global, type_params, NULL);
+    r = analyze_block(st->st_top, NULL, free, global, type_params, NULL, NULL, NULL);
     Py_DECREF(free);
     Py_DECREF(global);
     Py_DECREF(type_params);
