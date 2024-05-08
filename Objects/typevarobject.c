@@ -1873,7 +1873,8 @@ generic_init_subclass(PyTypeObject *cls, PyObject *args, PyObject *kwargs)
 static PyObject *
 generic_class_getitem(PyTypeObject *cls, PyObject *args, PyObject *kwargs)
 {
-    return call_typing_args_kwargs("_generic_class_getitem", cls, args, kwargs);
+    return Py_GenericAlias(cls, args);
+    // return call_typing_args_kwargs("_generic_class_getitem", cls, args, kwargs);
 }
 
 PyObject *
@@ -1886,14 +1887,14 @@ _Py_subscript_generic(PyThreadState* unused, PyObject *params)
         PyErr_SetString(PyExc_SystemError, "Cannot find Generic type");
         return NULL;
     }
-    PyObject *args[2] = {(PyObject *)interp->cached_objects.generic_type, params};
-    PyObject *result = call_typing_func_object("_GenericAlias", args, 2);
+    // PyObject *args[2] = {(PyObject *)interp->cached_objects.generic_type, params};
+    PyObject *result = Py_GenericAlias((PyObject *)interp->cached_objects.generic_type, params);
     Py_DECREF(params);
     return result;
 }
 
 static PyMethodDef generic_methods[] = {
-    {"__class_getitem__", (PyCFunction)(void (*)(void))generic_class_getitem,
+    {"__class_getitem__", Py_GenericAlias,
      METH_VARARGS | METH_KEYWORDS | METH_CLASS,
      generic_class_getitem_doc},
     {"__init_subclass__", (PyCFunction)(void (*)(void))generic_init_subclass,
