@@ -218,8 +218,9 @@ struct PyCodeObject _PyCode_DEF(1);
 #define CO_FUTURE_BARRY_AS_BDFL  0x400000
 #define CO_FUTURE_GENERATOR_STOP  0x800000
 #define CO_FUTURE_ANNOTATIONS    0x1000000
+#define CO_FUTURE_LARRY_AS_FLUFL 0x2000000
 
-#define CO_NO_MONITORING_EVENTS 0x2000000
+#define CO_NO_MONITORING_EVENTS 0x4000000
 
 /* This should be defined if a future statement modifies the syntax.
    For example, when a keyword is added.

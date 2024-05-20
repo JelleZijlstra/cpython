@@ -34,6 +34,8 @@ future_check_features(_PyFutureFeatures *ff, stmt_ty s, PyObject *filename)
             continue;
         } else if (strcmp(feature, FUTURE_BARRY_AS_BDFL) == 0) {
             ff->ff_features |= CO_FUTURE_BARRY_AS_BDFL;
+        } else if (strcmp(feature, FUTURE_LARRY_AS_FLUFL) == 0) {
+            ff->ff_features |= CO_FUTURE_LARRY_AS_FLUFL;
         } else if (strcmp(feature, FUTURE_GENERATOR_STOP) == 0) {
             continue;
         } else if (strcmp(feature, FUTURE_ANNOTATIONS) == 0) {
