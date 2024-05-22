@@ -823,6 +823,16 @@ class TypeParamsManglingTest(unittest.TestCase):
 
         self.assertEqual(Foo.Alias.__value__, (T, V))
 
+    def test_no_unnecessary_mangling(self):
+        ns = run_code("""
+            class __Foo:
+                pass
+            class Bar[T](__Foo):
+                pass
+        """)
+        Bar = ns["Bar"]
+        self.assertIn(ns["__Foo"], Bar.__bases__)
+
 
 class TypeParamsComplexCallsTest(unittest.TestCase):
     def test_defaults(self):

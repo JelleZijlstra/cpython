@@ -2625,7 +2625,7 @@ compiler_class(struct compiler *c, stmt_ty s)
     asdl_type_param_seq *type_params = s->v.ClassDef.type_params;
     int is_generic = asdl_seq_LEN(type_params) > 0;
     if (is_generic) {
-        Py_XSETREF(c->u->u_private, Py_NewRef(s->v.ClassDef.name));
+        //Py_XSETREF(c->u->u_private, Py_NewRef(s->v.ClassDef.name));
         PyObject *type_params_name = PyUnicode_FromFormat("<generic parameters of %U>",
                                                          s->v.ClassDef.name);
         if (!type_params_name) {
