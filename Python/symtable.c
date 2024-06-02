@@ -258,6 +258,8 @@ static int symtable_visit_match_case(struct symtable *st, match_case_ty m);
 static int symtable_visit_pattern(struct symtable *st, pattern_ty s);
 static int symtable_raise_if_annotation_block(struct symtable *st, const char *, expr_ty);
 static int symtable_raise_if_comprehension_block(struct symtable *st, expr_ty);
+static int symtable_add_def(struct symtable *st, PyObject *name, int flag,
+                            int lineno, int col_offset, int end_lineno, int end_col_offset);
 
 /* For debugging purposes only */
 #if _PY_DUMP_SYMTABLE
@@ -1389,6 +1391,18 @@ symtable_enter_block(struct symtable *st, identifier name, _Py_block_ty block,
         return 0;
     int result = symtable_enter_existing_block(st, ste);
     Py_DECREF(ste);
+    if (block == AnnotationBlock || block == TypeVarBoundBlock || block == TypeAliasBlock) {
+        _Py_DECLARE_STR(format, ".format");
+        // We need to insert code that reads this "parameter" to the function.
+        if (!symtable_add_def(st, &_Py_STR(format), DEF_PARAM,
+                              lineno, col_offset, end_lineno, end_col_offset)) {
+            return 0;
+        }
+        if (!symtable_add_def(st, &_Py_STR(format), USE,
+                              lineno, col_offset, end_lineno, end_col_offset)) {
+            return 0;
+        }
+    }
     return result;
 }
 
@@ -2503,18 +2517,6 @@ symtable_visit_annotation(struct symtable *st, expr_ty annotation, void *key)
                 return 0;
             }
         }
-
-        _Py_DECLARE_STR(format, ".format");
-        // The generated __annotate__ function takes a single parameter with the
-        // internal name ".format".
-        if (!symtable_add_def(st, &_Py_STR(format), DEF_PARAM,
-                                LOCATION(annotation))) {
-            return 0;
-        }
-        if (!symtable_add_def(st, &_Py_STR(format), USE,
-                                LOCATION(annotation))) {
-            return 0;
-        }
     }
     else {
         if (!symtable_enter_existing_block(st, parent_ste->ste_annotation_block)) {
@@ -2562,14 +2564,6 @@ symtable_visit_annotations(struct symtable *st, stmt_ty o, arguments_ty a, expr_
         if (!symtable_add_def(st, &_Py_ID(__classdict__), USE, LOCATION(o))) {
             return 0;
         }
-    }
-    _Py_DECLARE_STR(format, ".format");
-    // We need to insert code that reads this "parameter" to the function.
-    if (!symtable_add_def(st, &_Py_STR(format), DEF_PARAM, LOCATION(o))) {
-        return 0;
-    }
-    if (!symtable_add_def(st, &_Py_STR(format), USE, LOCATION(o))) {
-        return 0;
     }
     if (a->posonlyargs && !symtable_visit_argannotations(st, a->posonlyargs))
         return 0;

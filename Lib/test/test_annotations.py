@@ -555,3 +555,22 @@ class TestGetAnnotations(unittest.TestCase):
             annotations.get_annotations(isa.MyClassWithLocalAnnotations, eval_str=True),
             {"x": int},
         )
+
+
+class TestCallEvaluateFunction(unittest.TestCase):
+    def test_evaluation(self):
+        def evaluate(format, exc=NotImplementedError):
+            if format != 1:
+                raise exc
+            return undefined
+
+        with self.assertRaises(NameError):
+            annotations.call_evaluate_function(evaluate, annotations.Format.VALUE)
+        self.assertEqual(
+            annotations.call_evaluate_function(evaluate, annotations.Format.FORWARDREF),
+            annotations.ForwardRef("undefined"),
+        )
+        self.assertEqual(
+            annotations.call_evaluate_function(evaluate, annotations.Format.SOURCE),
+            "undefined",
+        )

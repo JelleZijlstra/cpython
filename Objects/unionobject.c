@@ -1,9 +1,8 @@
 // types.UnionType -- used to represent e.g. Union[int, str], int | str
 #include "Python.h"
 #include "pycore_object.h"  // _PyObject_GC_TRACK/UNTRACK
-#include "pycore_typevarobject.h"  // _PyTypeAlias_Type
+#include "pycore_typevarobject.h"  // _PyTypeAlias_Type, _Py_typing_type_repr
 #include "pycore_unionobject.h"
-
 
 
 static PyObject *make_union(PyObject *);
@@ -181,67 +180,6 @@ _Py_union_type_or(PyObject* self, PyObject* other)
     return new_union;
 }
 
-static int
-union_repr_item(_PyUnicodeWriter *writer, PyObject *p)
-{
-    PyObject *qualname = NULL;
-    PyObject *module = NULL;
-    PyObject *r = NULL;
-    int rc;
-
-    if (p == (PyObject *)&_PyNone_Type) {
-        return _PyUnicodeWriter_WriteASCIIString(writer, "None", 4);
-    }
-
-    if ((rc = PyObject_HasAttrWithError(p, &_Py_ID(__origin__))) > 0 &&
-        (rc = PyObject_HasAttrWithError(p, &_Py_ID(__args__))) > 0)
-    {
-        // It looks like a GenericAlias
-        goto use_repr;
-    }
-    if (rc < 0) {
-        goto exit;
-    }
-
-    if (PyObject_GetOptionalAttr(p, &_Py_ID(__qualname__), &qualname) < 0) {
-        goto exit;
-    }
-    if (qualname == NULL) {
-        goto use_repr;
-    }
-    if (PyObject_GetOptionalAttr(p, &_Py_ID(__module__), &module) < 0) {
-        goto exit;
-    }
-    if (module == NULL || module == Py_None) {
-        goto use_repr;
-    }
-
-    // Looks like a class
-    if (PyUnicode_Check(module) &&
-        _PyUnicode_EqualToASCIIString(module, "builtins"))
-    {
-        // builtins don't need a module name
-        r = PyObject_Str(qualname);
-        goto exit;
-    }
-    else {
-        r = PyUnicode_FromFormat("%S.%S", module, qualname);
-        goto exit;
-    }
-
-use_repr:
-    r = PyObject_Repr(p);
-exit:
-    Py_XDECREF(qualname);
-    Py_XDECREF(module);
-    if (r == NULL) {
-        return -1;
-    }
-    rc = _PyUnicodeWriter_WriteStr(writer, r);
-    Py_DECREF(r);
-    return rc;
-}
-
 static PyObject *
 union_repr(PyObject *self)
 {
@@ -255,7 +193,7 @@ union_repr(PyObject *self)
             goto error;
         }
         PyObject *p = PyTuple_GET_ITEM(alias->args, i);
-        if (union_repr_item(&writer, p) < 0) {
+        if (_Py_typing_type_repr(&writer, p) < 0) {
             goto error;
         }
     }
