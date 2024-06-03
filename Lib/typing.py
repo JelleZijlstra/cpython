@@ -1077,7 +1077,7 @@ def _generic_class_getitem(cls, params):
         params = (params,)
 
     params = tuple(_type_convert(p) for p in params)
-    is_generic_or_protocol = cls in (Generic, Protocol)
+    is_generic_or_protocol = cls is Generic or cls is Protocol
 
     if is_generic_or_protocol:
         # Generic and Protocol can only be subscripted with unique type variables.
