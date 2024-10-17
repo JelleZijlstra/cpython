@@ -215,6 +215,8 @@ int _PyOpcode_num_popped(int opcode, int oparg)  {
             return 1;
         case GET_LEN:
             return 1;
+        case GET_REPR:
+            return 1;
         case GET_YIELD_FROM_ITER:
             return 1;
         case IMPORT_FROM:
@@ -674,6 +676,8 @@ int _PyOpcode_num_pushed(int opcode, int oparg)  {
             return 1;
         case GET_LEN:
             return 2;
+        case GET_REPR:
+            return 1;
         case GET_YIELD_FROM_ITER:
             return 1;
         case IMPORT_FROM:
@@ -1104,6 +1108,7 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[266] = {
     [GET_AWAITABLE] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [GET_ITER] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [GET_LEN] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
+    [GET_REPR] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [GET_YIELD_FROM_ITER] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG },
     [IMPORT_FROM] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_NAME_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [IMPORT_NAME] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_NAME_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
@@ -1333,6 +1338,7 @@ _PyOpcode_macro_expansion[256] = {
     [GET_AWAITABLE] = { .nuops = 1, .uops = { { _GET_AWAITABLE, 0, 0 } } },
     [GET_ITER] = { .nuops = 1, .uops = { { _GET_ITER, 0, 0 } } },
     [GET_LEN] = { .nuops = 1, .uops = { { _GET_LEN, 0, 0 } } },
+    [GET_REPR] = { .nuops = 1, .uops = { { _GET_REPR, 0, 0 } } },
     [GET_YIELD_FROM_ITER] = { .nuops = 1, .uops = { { _GET_YIELD_FROM_ITER, 0, 0 } } },
     [IMPORT_FROM] = { .nuops = 1, .uops = { { _IMPORT_FROM, 0, 0 } } },
     [IMPORT_NAME] = { .nuops = 1, .uops = { { _IMPORT_NAME, 0, 0 } } },
@@ -1522,6 +1528,7 @@ const char *_PyOpcode_OpName[266] = {
     [GET_AWAITABLE] = "GET_AWAITABLE",
     [GET_ITER] = "GET_ITER",
     [GET_LEN] = "GET_LEN",
+    [GET_REPR] = "GET_REPR",
     [GET_YIELD_FROM_ITER] = "GET_YIELD_FROM_ITER",
     [IMPORT_FROM] = "IMPORT_FROM",
     [IMPORT_NAME] = "IMPORT_NAME",
@@ -1778,6 +1785,7 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [GET_AWAITABLE] = GET_AWAITABLE,
     [GET_ITER] = GET_ITER,
     [GET_LEN] = GET_LEN,
+    [GET_REPR] = GET_REPR,
     [GET_YIELD_FROM_ITER] = GET_YIELD_FROM_ITER,
     [IMPORT_FROM] = IMPORT_FROM,
     [IMPORT_NAME] = IMPORT_NAME,
@@ -1907,7 +1915,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
 #endif // NEED_OPCODE_METADATA
 
 #define EXTRA_CASES \
-    case 116: \
     case 117: \
     case 118: \
     case 119: \

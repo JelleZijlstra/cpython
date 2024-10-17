@@ -1462,6 +1462,13 @@
             break;
         }
 
+        case _GET_REPR: {
+            _Py_UopsSymbol *repr;
+            repr = sym_new_not_null(ctx);
+            stack_pointer[-1] = repr;
+            break;
+        }
+
         case _GET_YIELD_FROM_ITER: {
             _Py_UopsSymbol *iter;
             iter = sym_new_not_null(ctx);

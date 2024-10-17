@@ -2762,6 +2762,14 @@ dummy_func(
             iter = PyStackRef_FromPyObjectSteal(iter_o);
         }
 
+        inst(GET_REPR, (value -- repr)) {
+            PyObject *value_o = PyStackRef_AsPyObjectBorrow(value);
+            PyObject *repr_o = PyObject_Repr(value_o);
+            DECREF_INPUTS();
+            ERROR_IF(repr_o == NULL, error);
+            repr = PyStackRef_FromPyObjectSteal(repr_o);
+        }
+
         inst(GET_YIELD_FROM_ITER, (iterable -- iter)) {
             /* before: [obj]; after [getiter(obj)] */
             PyObject *iterable_o = PyStackRef_AsPyObjectBorrow(iterable);

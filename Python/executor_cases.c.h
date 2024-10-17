@@ -3323,6 +3323,21 @@
             break;
         }
 
+        case _GET_REPR: {
+            _PyStackRef value;
+            _PyStackRef repr;
+            value = stack_pointer[-1];
+            PyObject *value_o = PyStackRef_AsPyObjectBorrow(value);
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            PyObject *repr_o = PyObject_Repr(value_o);
+            stack_pointer = _PyFrame_GetStackPointer(frame);
+            PyStackRef_CLOSE(value);
+            if (repr_o == NULL) JUMP_TO_ERROR();
+            repr = PyStackRef_FromPyObjectSteal(repr_o);
+            stack_pointer[-1] = repr;
+            break;
+        }
+
         case _GET_YIELD_FROM_ITER: {
             _PyStackRef iterable;
             _PyStackRef iter;

@@ -4884,8 +4884,8 @@ codegen_visit_expr(compiler *c, expr_ty e)
         VISIT(c, expr, e->v.NamedExpr.target);
         break;
     case Repr_kind:
-        // TODO
-        abort();
+        VISIT(c, expr, e->v.Repr.value);
+        ADDOP(c, loc, GET_REPR);
         break;
     case BoolOp_kind:
         return codegen_boolop(c, e);

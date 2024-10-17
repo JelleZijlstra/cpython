@@ -61,6 +61,7 @@ const char * const _PyParser_TokenNames[] = {
     "ELLIPSIS",
     "COLONEQUAL",
     "EXCLAMATION",
+    "BACKTICK",
     "OP",
     "TYPE_IGNORE",
     "TYPE_COMMENT",
@@ -101,6 +102,7 @@ _PyToken_OneChar(int c1)
     case '[': return LSQB;
     case ']': return RSQB;
     case '^': return CIRCUMFLEX;
+    case '`': return BACKTICK;
     case '{': return LBRACE;
     case '|': return VBAR;
     case '}': return RBRACE;

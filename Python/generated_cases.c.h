@@ -4272,6 +4272,24 @@
             DISPATCH();
         }
 
+        TARGET(GET_REPR) {
+            frame->instr_ptr = next_instr;
+            next_instr += 1;
+            INSTRUCTION_STATS(GET_REPR);
+            _PyStackRef value;
+            _PyStackRef repr;
+            value = stack_pointer[-1];
+            PyObject *value_o = PyStackRef_AsPyObjectBorrow(value);
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            PyObject *repr_o = PyObject_Repr(value_o);
+            stack_pointer = _PyFrame_GetStackPointer(frame);
+            PyStackRef_CLOSE(value);
+            if (repr_o == NULL) goto pop_1_error;
+            repr = PyStackRef_FromPyObjectSteal(repr_o);
+            stack_pointer[-1] = repr;
+            DISPATCH();
+        }
+
         TARGET(GET_YIELD_FROM_ITER) {
             frame->instr_ptr = next_instr;
             next_instr += 1;
