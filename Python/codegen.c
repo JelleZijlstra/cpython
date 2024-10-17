@@ -4883,6 +4883,10 @@ codegen_visit_expr(compiler *c, expr_ty e)
         ADDOP_I(c, loc, COPY, 1);
         VISIT(c, expr, e->v.NamedExpr.target);
         break;
+    case Repr_kind:
+        // TODO
+        abort();
+        break;
     case BoolOp_kind:
         return codegen_boolop(c, e);
     case BinOp_kind:

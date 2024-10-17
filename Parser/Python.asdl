@@ -69,6 +69,7 @@ module Python
          | SetComp(expr elt, comprehension* generators)
          | DictComp(expr key, expr value, comprehension* generators)
          | GeneratorExp(expr elt, comprehension* generators)
+         | Repr(expr value)
          -- the grammar constrains where yield expressions can occur
          | Await(expr value)
          | Yield(expr? value)

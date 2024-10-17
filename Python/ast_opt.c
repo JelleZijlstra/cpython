@@ -761,6 +761,9 @@ astfold_expr(expr_ty node_, PyArena *ctx_, _PyASTOptimizeState *state)
         CALL(astfold_arguments, arguments_ty, node_->v.Lambda.args);
         CALL(astfold_expr, expr_ty, node_->v.Lambda.body);
         break;
+    case Repr_kind:
+        CALL(astfold_expr, expr_ty, node_->v.Repr.value);
+        break;
     case IfExp_kind:
         CALL(astfold_expr, expr_ty, node_->v.IfExp.test);
         CALL(astfold_expr, expr_ty, node_->v.IfExp.body);

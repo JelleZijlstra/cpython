@@ -846,6 +846,7 @@ atom[expr_ty]:
     | &'[' (list | listcomp)
     | &'{' (dict | set | dictcomp | setcomp)
     | '...' { _PyAST_Constant(Py_Ellipsis, NULL, EXTRA) }
+    | '`' a=expression '`' { _PyAST_Repr(a, EXTRA) }
 
 group[expr_ty]:
     | '(' a=(yield_expr | named_expression) ')' { a }

@@ -291,6 +291,9 @@ validate_expr(struct validator *state, expr_ty exp, expr_context_ty ctx)
             validate_expr(state, exp->v.IfExp.body, Load) &&
             validate_expr(state, exp->v.IfExp.orelse, Load);
         break;
+    case Repr_kind:
+        ret = validate_expr(state, exp->v.Repr.value, Load);
+        break;
     case Dict_kind:
         if (asdl_seq_LEN(exp->v.Dict.keys) != asdl_seq_LEN(exp->v.Dict.values)) {
             PyErr_SetString(PyExc_ValueError,

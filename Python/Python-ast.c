@@ -148,6 +148,7 @@ void _PyAST_Fini(PyInterpreterState *interp)
     Py_CLEAR(state->RShift_singleton);
     Py_CLEAR(state->RShift_type);
     Py_CLEAR(state->Raise_type);
+    Py_CLEAR(state->Repr_type);
     Py_CLEAR(state->Return_type);
     Py_CLEAR(state->SetComp_type);
     Py_CLEAR(state->Set_type);
@@ -601,6 +602,9 @@ static const char * const DictComp_fields[]={
 static const char * const GeneratorExp_fields[]={
     "elt",
     "generators",
+};
+static const char * const Repr_fields[]={
+    "value",
 };
 static const char * const Await_fields[]={
     "value",
@@ -2952,6 +2956,31 @@ add_ast_annotations(struct ast_state *state)
         return 0;
     }
     Py_DECREF(GeneratorExp_annotations);
+    PyObject *Repr_annotations = PyDict_New();
+    if (!Repr_annotations) return 0;
+    {
+        PyObject *type = state->expr_type;
+        Py_INCREF(type);
+        cond = PyDict_SetItemString(Repr_annotations, "value", type) == 0;
+        Py_DECREF(type);
+        if (!cond) {
+            Py_DECREF(Repr_annotations);
+            return 0;
+        }
+    }
+    cond = PyObject_SetAttrString(state->Repr_type, "_field_types",
+                                  Repr_annotations) == 0;
+    if (!cond) {
+        Py_DECREF(Repr_annotations);
+        return 0;
+    }
+    cond = PyObject_SetAttrString(state->Repr_type, "__annotations__",
+                                  Repr_annotations) == 0;
+    if (!cond) {
+        Py_DECREF(Repr_annotations);
+        return 0;
+    }
+    Py_DECREF(Repr_annotations);
     PyObject *Await_annotations = PyDict_New();
     if (!Await_annotations) return 0;
     {
@@ -6281,6 +6310,7 @@ init_types(void *arg)
         "     | SetComp(expr elt, comprehension* generators)\n"
         "     | DictComp(expr key, expr value, comprehension* generators)\n"
         "     | GeneratorExp(expr elt, comprehension* generators)\n"
+        "     | Repr(expr value)\n"
         "     | Await(expr value)\n"
         "     | Yield(expr? value)\n"
         "     | YieldFrom(expr value)\n"
@@ -6352,6 +6382,10 @@ init_types(void *arg)
                                          2,
         "GeneratorExp(expr elt, comprehension* generators)");
     if (!state->GeneratorExp_type) return -1;
+    state->Repr_type = make_type(state, "Repr", state->expr_type, Repr_fields,
+                                 1,
+        "Repr(expr value)");
+    if (!state->Repr_type) return -1;
     state->Await_type = make_type(state, "Await", state->expr_type,
                                   Await_fields, 1,
         "Await(expr value)");
@@ -7916,6 +7950,28 @@ _PyAST_GeneratorExp(expr_ty elt, asdl_comprehension_seq * generators, int
     p->kind = GeneratorExp_kind;
     p->v.GeneratorExp.elt = elt;
     p->v.GeneratorExp.generators = generators;
+    p->lineno = lineno;
+    p->col_offset = col_offset;
+    p->end_lineno = end_lineno;
+    p->end_col_offset = end_col_offset;
+    return p;
+}
+
+expr_ty
+_PyAST_Repr(expr_ty value, int lineno, int col_offset, int end_lineno, int
+            end_col_offset, PyArena *arena)
+{
+    expr_ty p;
+    if (!value) {
+        PyErr_SetString(PyExc_ValueError,
+                        "field 'value' is required for Repr");
+        return NULL;
+    }
+    p = (expr_ty)_PyArena_Malloc(arena, sizeof(*p));
+    if (!p)
+        return NULL;
+    p->kind = Repr_kind;
+    p->v.Repr.value = value;
     p->lineno = lineno;
     p->col_offset = col_offset;
     p->end_lineno = end_lineno;
@@ -9625,6 +9681,16 @@ ast2obj_expr(struct ast_state *state, struct validator *vstate, void* _o)
                              ast2obj_comprehension);
         if (!value) goto failed;
         if (PyObject_SetAttr(result, state->generators, value) == -1)
+            goto failed;
+        Py_DECREF(value);
+        break;
+    case Repr_kind:
+        tp = (PyTypeObject *)state->Repr_type;
+        result = PyType_GenericNew(tp, NULL, NULL);
+        if (!result) goto failed;
+        value = ast2obj_expr(state, vstate, o->v.Repr.value);
+        if (!value) goto failed;
+        if (PyObject_SetAttr(result, state->value, value) == -1)
             goto failed;
         Py_DECREF(value);
         break;
@@ -14510,6 +14576,36 @@ obj2ast_expr(struct ast_state *state, PyObject* obj, expr_ty* out, PyArena*
         if (*out == NULL) goto failed;
         return 0;
     }
+    tp = state->Repr_type;
+    isinstance = PyObject_IsInstance(obj, tp);
+    if (isinstance == -1) {
+        return -1;
+    }
+    if (isinstance) {
+        expr_ty value;
+
+        if (PyObject_GetOptionalAttr(obj, state->value, &tmp) < 0) {
+            return -1;
+        }
+        if (tmp == NULL) {
+            PyErr_SetString(PyExc_TypeError, "required field \"value\" missing from Repr");
+            return -1;
+        }
+        else {
+            int res;
+            if (_Py_EnterRecursiveCall(" while traversing 'Repr' node")) {
+                goto failed;
+            }
+            res = obj2ast_expr(state, tmp, &value, arena);
+            _Py_LeaveRecursiveCall();
+            if (res != 0) goto failed;
+            Py_CLEAR(tmp);
+        }
+        *out = _PyAST_Repr(value, lineno, col_offset, end_lineno,
+                           end_col_offset, arena);
+        if (*out == NULL) goto failed;
+        return 0;
+    }
     tp = state->Await_type;
     isinstance = PyObject_IsInstance(obj, tp);
     if (isinstance == -1) {
@@ -17863,6 +17959,9 @@ astmodule_exec(PyObject *m)
     }
     if (PyModule_AddObjectRef(m, "GeneratorExp", state->GeneratorExp_type) < 0)
         {
+        return -1;
+    }
+    if (PyModule_AddObjectRef(m, "Repr", state->Repr_type) < 0) {
         return -1;
     }
     if (PyModule_AddObjectRef(m, "Await", state->Await_type) < 0) {

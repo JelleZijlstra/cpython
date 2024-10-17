@@ -14446,6 +14446,7 @@ slice_rule(Parser *p)
 //     | &'[' (list | listcomp)
 //     | &'{' (dict | set | dictcomp | setcomp)
 //     | '...'
+//     | '`' expression '`'
 static expr_ty
 atom_rule(Parser *p)
 {
@@ -14720,6 +14721,45 @@ atom_rule(Parser *p)
         p->mark = _mark;
         D(fprintf(stderr, "%*c%s atom[%d-%d]: %s failed!\n", p->level, ' ',
                   p->error_indicator ? "ERROR!" : "-", _mark, p->mark, "'...'"));
+    }
+    { // '`' expression '`'
+        if (p->error_indicator) {
+            p->level--;
+            return NULL;
+        }
+        D(fprintf(stderr, "%*c> atom[%d-%d]: %s\n", p->level, ' ', _mark, p->mark, "'`' expression '`'"));
+        Token * _literal;
+        Token * _literal_1;
+        expr_ty a;
+        if (
+            (_literal = _PyPegen_expect_token(p, 55))  // token='`'
+            &&
+            (a = expression_rule(p))  // expression
+            &&
+            (_literal_1 = _PyPegen_expect_token(p, 55))  // token='`'
+        )
+        {
+            D(fprintf(stderr, "%*c+ atom[%d-%d]: %s succeeded!\n", p->level, ' ', _mark, p->mark, "'`' expression '`'"));
+            Token *_token = _PyPegen_get_last_nonnwhitespace_token(p);
+            if (_token == NULL) {
+                p->level--;
+                return NULL;
+            }
+            int _end_lineno = _token->end_lineno;
+            UNUSED(_end_lineno); // Only used by EXTRA macro
+            int _end_col_offset = _token->end_col_offset;
+            UNUSED(_end_col_offset); // Only used by EXTRA macro
+            _res = _PyAST_Repr ( a , EXTRA );
+            if (_res == NULL && PyErr_Occurred()) {
+                p->error_indicator = 1;
+                p->level--;
+                return NULL;
+            }
+            goto done;
+        }
+        p->mark = _mark;
+        D(fprintf(stderr, "%*c%s atom[%d-%d]: %s failed!\n", p->level, ' ',
+                  p->error_indicator ? "ERROR!" : "-", _mark, p->mark, "'`' expression '`'"));
     }
     _res = NULL;
   done:
