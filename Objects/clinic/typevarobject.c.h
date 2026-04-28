@@ -58,7 +58,7 @@ typevar_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     PyObject *name;
     PyObject *constraints = NULL;
     PyObject *bound = Py_None;
-    PyObject *default_value = &_Py_NoDefaultStruct;
+    PyObject *default_value = get_NoDefault();
     int covariant = 0;
     int contravariant = 0;
     int infer_variance = 0;
@@ -372,7 +372,7 @@ paramspec_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     Py_ssize_t noptargs = nargs + (kwargs ? PyDict_GET_SIZE(kwargs) : 0) - 1;
     PyObject *name;
     PyObject *bound = Py_None;
-    PyObject *default_value = &_Py_NoDefaultStruct;
+    PyObject *default_value = get_NoDefault();
     int covariant = 0;
     int contravariant = 0;
     int infer_variance = 0;
@@ -568,7 +568,7 @@ typevartuple(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     int covariant = 0;
     int contravariant = 0;
     int infer_variance = 0;
-    PyObject *default_value = &_Py_NoDefaultStruct;
+    PyObject *default_value = get_NoDefault();
 
     fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
@@ -803,4 +803,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=2e7dd170924d92e5 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=c5d10cc67c83b028 input=a9049054013a1b77]*/

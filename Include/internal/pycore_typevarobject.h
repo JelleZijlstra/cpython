@@ -19,8 +19,6 @@ extern void _Py_clear_generic_types(PyInterpreterState *);
 extern int _Py_typing_type_repr(PyUnicodeWriter *, PyObject *);
 
 extern PyTypeObject _PyTypeAlias_Type;
-extern PyTypeObject _PyNoDefault_Type;
-extern PyObject _Py_NoDefaultStruct;
 
 #ifdef __cplusplus
 }

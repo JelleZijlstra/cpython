@@ -1,5 +1,6 @@
 // TypeVar, TypeVarTuple, ParamSpec, and TypeAlias
 #include "Python.h"
+#include "sentinelobject.h"       // PySentinel_New, PySentinel_Check
 #include "pycore_interpframe.h"   // _PyInterpreterFrame
 #include "pycore_object.h"        // _PyObject_GC_TRACK/UNTRACK, PyAnnotateFormat
 #include "pycore_tuple.h"         // _PyTuple_FromPair
@@ -70,64 +71,23 @@ typedef struct {
 #define paramspecobject_CAST(op)    ((paramspecobject *)(op))
 #define typealiasobject_CAST(op)    ((typealiasobject *)(op))
 
-#include "clinic/typevarobject.c.h"
-
 /* NoDefault is a marker object to indicate that a parameter has no default. */
 
 static PyObject *
-NoDefault_repr(PyObject *op)
+get_NoDefault(void)
 {
-    return PyUnicode_FromString("typing.NoDefault");
+    PyObject *no_default = _PyInterpreterState_GET()->cached_objects.nodefault_sentinel;
+    assert(no_default != NULL);
+    return no_default;
 }
 
-static PyObject *
-NoDefault_reduce(PyObject *op, PyObject *Py_UNUSED(ignored))
+static bool
+is_NoDefault(PyObject *obj)
 {
-    return PyUnicode_FromString("NoDefault");
+    return PySentinel_Check(obj) && obj == get_NoDefault();
 }
 
-static PyMethodDef nodefault_methods[] = {
-    {"__reduce__", NoDefault_reduce, METH_NOARGS, NULL},
-    {NULL, NULL}
-};
-
-static PyObject *
-nodefault_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-    if (PyTuple_GET_SIZE(args) || (kwargs && PyDict_GET_SIZE(kwargs))) {
-        PyErr_SetString(PyExc_TypeError, "NoDefaultType takes no arguments");
-        return NULL;
-    }
-    return &_Py_NoDefaultStruct;
-}
-
-static void
-nodefault_dealloc(PyObject *nodefault)
-{
-    /* This should never get called, but we also don't want to SEGV if
-     * we accidentally decref NoDefault out of existence. Instead,
-     * since NoDefault is an immortal object, re-set the reference count.
-     */
-    _Py_SetImmortal(nodefault);
-}
-
-PyDoc_STRVAR(nodefault_doc,
-"NoDefaultType()\n"
-"--\n\n"
-"The type of the NoDefault singleton.");
-
-PyTypeObject _PyNoDefault_Type = {
-    PyVarObject_HEAD_INIT(&PyType_Type, 0)
-    "NoDefaultType",
-    .tp_dealloc = nodefault_dealloc,
-    .tp_repr = NoDefault_repr,
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_doc = nodefault_doc,
-    .tp_methods = nodefault_methods,
-    .tp_new = nodefault_new,
-};
-
-PyObject _Py_NoDefaultStruct = _PyObject_HEAD_INIT(&_PyNoDefault_Type);
+#include "clinic/typevarobject.c.h"
 
 typedef struct {
     PyObject_HEAD
@@ -566,7 +526,7 @@ typevar_default(PyObject *op, void *Py_UNUSED(closure))
         return Py_NewRef(self->default_value);
     }
     if (self->evaluate_default == NULL) {
-        return &_Py_NoDefaultStruct;
+        return Py_NewRef(get_NoDefault());
     }
     PyObject *default_value = PyObject_CallNoArgs(self->evaluate_default);
     self->default_value = Py_XNewRef(default_value);
@@ -682,7 +642,7 @@ typevar.__new__ as typevar_new
     name: object(subclass_of="&PyUnicode_Type")
     *constraints: tuple
     bound: object = None
-    default as default_value: object(c_default="&_Py_NoDefaultStruct") = typing.NoDefault
+    default as default_value: object(c_default="get_NoDefault()") = typing.NoDefault
     covariant: bool = False
     contravariant: bool = False
     infer_variance: bool = False
@@ -694,7 +654,7 @@ static PyObject *
 typevar_new_impl(PyTypeObject *type, PyObject *name, PyObject *constraints,
                  PyObject *bound, PyObject *default_value, int covariant,
                  int contravariant, int infer_variance)
-/*[clinic end generated code: output=d2b248ff074eaab6 input=1b5b62e40c92c167]*/
+/*[clinic end generated code: output=d2b248ff074eaab6 input=9b1f3c35561a1f8e]*/
 {
     if (covariant && contravariant) {
         PyErr_SetString(PyExc_ValueError,
@@ -806,7 +766,7 @@ typevar_typing_prepare_subst_impl(typevarobject *self, PyObject *alias,
             Py_DECREF(params);
             return NULL;
         }
-        if (dflt != &_Py_NoDefaultStruct) {
+        if (!is_NoDefault(dflt)) {
             PyObject *new_args = PyTuple_Pack(1, dflt);
             Py_DECREF(dflt);
             if (new_args == NULL) {
@@ -849,7 +809,7 @@ typevar_has_default_impl(typevarobject *self)
 /*[clinic end generated code: output=76bf0b8dc98b97dd input=31024aa030761cf6]*/
 {
     if (self->evaluate_default != NULL ||
-        (self->default_value != &_Py_NoDefaultStruct && self->default_value != NULL)) {
+        (self->default_value != NULL && !is_NoDefault(self->default_value))) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -1257,7 +1217,7 @@ paramspec_default(PyObject *op, void *Py_UNUSED(closure))
         return Py_NewRef(self->default_value);
     }
     if (self->evaluate_default == NULL) {
-        return &_Py_NoDefaultStruct;
+        return Py_NewRef(get_NoDefault());
     }
     PyObject *default_value = PyObject_CallNoArgs(self->evaluate_default);
     self->default_value = Py_XNewRef(default_value);
@@ -1318,7 +1278,7 @@ paramspec.__new__ as paramspec_new
     name: object(subclass_of="&PyUnicode_Type")
     *
     bound: object = None
-    default as default_value: object(c_default="&_Py_NoDefaultStruct") = typing.NoDefault
+    default as default_value: object(c_default="get_NoDefault()") = typing.NoDefault
     covariant: bool = False
     contravariant: bool = False
     infer_variance: bool = False
@@ -1330,7 +1290,7 @@ static PyObject *
 paramspec_new_impl(PyTypeObject *type, PyObject *name, PyObject *bound,
                    PyObject *default_value, int covariant, int contravariant,
                    int infer_variance)
-/*[clinic end generated code: output=47ca9d63fa5a094d input=495e1565bc067ab9]*/
+/*[clinic end generated code: output=47ca9d63fa5a094d input=026cbc5c0a4455d6]*/
 {
     if (covariant && contravariant) {
         PyErr_SetString(PyExc_ValueError, "Bivariant types are not supported.");
@@ -1418,7 +1378,7 @@ paramspec_has_default_impl(paramspecobject *self)
 /*[clinic end generated code: output=daaae7467a6a4368 input=2112e97eeb76cd59]*/
 {
     if (self->evaluate_default != NULL ||
-        (self->default_value != &_Py_NoDefaultStruct && self->default_value != NULL)) {
+        (self->default_value != NULL && !is_NoDefault(self->default_value))) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -1615,7 +1575,7 @@ typevartuple.__new__
     covariant: bool = False
     contravariant: bool = False
     infer_variance: bool = False
-    default as default_value: object(c_default="&_Py_NoDefaultStruct") = typing.NoDefault
+    default as default_value: object(c_default="get_NoDefault()") = typing.NoDefault
 
 Create a new TypeVarTuple with the given name.
 [clinic start generated code]*/
@@ -1624,7 +1584,7 @@ static PyObject *
 typevartuple_impl(PyTypeObject *type, PyObject *name, PyObject *bound,
                   int covariant, int contravariant, int infer_variance,
                   PyObject *default_value)
-/*[clinic end generated code: output=40bc9ca10f64e392 input=56e28c725a8da40b]*/
+/*[clinic end generated code: output=40bc9ca10f64e392 input=0a749433010aaa5e]*/
 {
     if (covariant && contravariant) {
         PyErr_SetString(PyExc_ValueError, "Bivariant types are not supported.");
@@ -1714,7 +1674,7 @@ typevartuple_has_default_impl(typevartupleobject *self)
 /*[clinic end generated code: output=4895f602f56a5e29 input=9ef3250ddb2c1851]*/
 {
     if (self->evaluate_default != NULL ||
-        (self->default_value != &_Py_NoDefaultStruct && self->default_value != NULL)) {
+        (self->default_value != NULL && !is_NoDefault(self->default_value))) {
         Py_RETURN_TRUE;
     }
     Py_RETURN_FALSE;
@@ -1760,7 +1720,7 @@ typevartuple_default(PyObject *op, void *Py_UNUSED(closure))
         return Py_NewRef(self->default_value);
     }
     if (self->evaluate_default == NULL) {
-        return &_Py_NoDefaultStruct;
+        return Py_NewRef(get_NoDefault());
     }
     PyObject *default_value = PyObject_CallNoArgs(self->evaluate_default);
     self->default_value = Py_XNewRef(default_value);
@@ -2033,7 +1993,7 @@ typealias_check_type_params(PyObject *type_params, int *err) {
             *err = 1;
             return NULL;
         }
-        if (dflt == &_Py_NoDefaultStruct) {
+        if (is_NoDefault(dflt)) {
             if (default_seen) {
                 *err = 1;
                 PyErr_Format(PyExc_TypeError,
@@ -2418,6 +2378,11 @@ int _Py_initialize_generic(PyInterpreterState *interp)
     MAKE_TYPE(paramspeckwargs);
     MAKE_TYPE(constevaluator);
 #undef MAKE_TYPE
+    PyObject *no_default = PySentinel_New("NoDefault", "typing");
+    if (no_default == NULL) {
+        return -1;
+    }
+    interp->cached_objects.nodefault_sentinel = no_default;
     return 0;
 }
 

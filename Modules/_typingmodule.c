@@ -5,6 +5,7 @@
 #endif
 
 #include "Python.h"
+#include "sentinelobject.h"  // PySentinel_New
 #include "internal/pycore_interp.h"
 #include "internal/pycore_typevarobject.h"
 #include "internal/pycore_unionobject.h"  // _PyUnion_Type
@@ -60,14 +61,12 @@ _typing_exec(PyObject *m)
     EXPORT_TYPE("ParamSpecArgs", paramspecargs_type);
     EXPORT_TYPE("ParamSpecKwargs", paramspeckwargs_type);
     EXPORT_TYPE("Generic", generic_type);
+    EXPORT_TYPE("NoDefault", nodefault_sentinel);
 #undef EXPORT_TYPE
     if (PyModule_AddObjectRef(m, "TypeAliasType", (PyObject *)&_PyTypeAlias_Type) < 0) {
         return -1;
     }
     if (PyModule_AddObjectRef(m, "Union", (PyObject *)&_PyUnion_Type) < 0) {
-        return -1;
-    }
-    if (PyModule_AddObjectRef(m, "NoDefault", (PyObject *)&_Py_NoDefaultStruct) < 0) {
         return -1;
     }
     return 0;
