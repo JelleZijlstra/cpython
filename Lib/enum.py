@@ -4,7 +4,7 @@ from types import MappingProxyType, DynamicClassAttribute
 
 
 __all__ = [
-        'EnumType', 'EnumMeta', 'EnumDict',
+        'enum', 'EnumType', 'EnumMeta', 'EnumDict',
         'Enum', 'IntEnum', 'StrEnum', 'Flag', 'IntFlag', 'ReprEnum',
         'auto', 'unique', 'property', 'verify', 'member', 'nonmember',
         'FlagBoundary', 'STRICT', 'CONFORM', 'EJECT', 'KEEP',
@@ -1353,6 +1353,16 @@ class Enum(metaclass=EnumType):
     def value(self):
         """The value of the Enum member."""
         return self._value_
+
+
+class _EnumClassBuilder:
+    def __build_class__(self, func, name, *bases, **kwds):
+        if any(isinstance(base, EnumType) for base in bases):
+            return bltns.__build_class__(func, name, *bases, **kwds)
+        return bltns.__build_class__(func, name, *bases, Enum, **kwds)
+
+
+enum = _EnumClassBuilder()
 
 
 class ReprEnum(Enum):

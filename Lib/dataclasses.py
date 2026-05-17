@@ -206,6 +206,9 @@ _FIELDS = '__dataclass_fields__'
 # @dataclass.
 _PARAMS = '__dataclass_params__'
 
+# The name of a temporary attribute on builder-created slotted classes.
+_BUILDER_DEFAULTS = '__dataclass_builder_defaults__'
+
 # The name of the function, that if it exists, is called at the end of
 # __init__.
 _POST_INIT_NAME = '__post_init__'
@@ -821,7 +824,11 @@ def _get_field(cls, a_name, a_type, default_kw_only):
 
     # If the default value isn't derived from Field, then it's only a
     # normal default value.  Convert it to a Field().
-    default = getattr(cls, a_name, MISSING)
+    builder_defaults = getattr(cls, _BUILDER_DEFAULTS, None)
+    if builder_defaults is not None and a_name in builder_defaults:
+        default = builder_defaults[a_name]
+    else:
+        default = getattr(cls, a_name, MISSING)
     if isinstance(default, Field):
         f = default
     else:
@@ -996,7 +1003,8 @@ _auto_docstring = _AutoDocstring()
 
 
 def _process_class(cls, init, repr, eq, order, unsafe_hash, frozen,
-                   match_args, kw_only, slots, weakref_slot):
+                   match_args, kw_only, slots, weakref_slot,
+                   slots_already_added=False):
     # Now that dicts retain insertion order, there's no reason to use
     # an ordered dict.  I am leveraging that ordering here, because
     # derived class fields overwrite base class fields, but the order
@@ -1238,8 +1246,20 @@ def _process_class(cls, init, repr, eq, order, unsafe_hash, frozen,
     # It's an error to specify weakref_slot if slots is False.
     if weakref_slot and not slots:
         raise TypeError('weakref_slot is True but slots is False')
-    if slots:
+    if slots and slots_already_added:
+        if frozen:
+            if '__getstate__' not in cls.__dict__:
+                cls.__getstate__ = _dataclass_getstate
+            if '__setstate__' not in cls.__dict__:
+                cls.__setstate__ = _dataclass_setstate
+    elif slots:
         cls = _add_slots(cls, frozen, weakref_slot, fields)
+
+    if slots_already_added:
+        try:
+            delattr(cls, _BUILDER_DEFAULTS)
+        except AttributeError:
+            pass
 
     abc.update_abstractmethods(cls)
 
@@ -1455,6 +1475,133 @@ def dataclass(cls=None, /, *, init=True, repr=True, eq=True, order=False,
 
     # We're called as @dataclass without parens.
     return wrap(cls)
+
+
+_DATACLASS_OPTION_NAMES = frozenset({
+    'init',
+    'repr',
+    'eq',
+    'order',
+    'unsafe_hash',
+    'frozen',
+    'match_args',
+    'kw_only',
+    'slots',
+    'weakref_slot',
+})
+
+
+def _split_dataclass_build_class_kwargs(kwds):
+    dataclass_kwds = {}
+    class_kwds = {}
+    for name, value in kwds.items():
+        if name in _DATACLASS_OPTION_NAMES:
+            dataclass_kwds[name] = value
+        else:
+            class_kwds[name] = value
+    return dataclass_kwds, class_kwds
+
+
+def _get_dataclass_builder_annotations(ns):
+    annotate = ns.get('__annotate_func__')
+    if annotate is None:
+        return ns.get('__annotations__', {})
+    return annotationlib.call_annotate_function(
+        annotate, annotationlib.Format.STRING)
+
+
+class _DataclassBuilderNamespace:
+    pass
+
+
+def _get_dataclass_builder_slots(ns, bases, weakref_slot):
+    if '__slots__' in ns:
+        name = ns.get('__qualname__', ns.get('__name__'))
+        raise TypeError(f'{name} already specifies __slots__')
+
+    annotations = _get_dataclass_builder_annotations(ns)
+    proxy = _DataclassBuilderNamespace()
+    proxy.__module__ = ns.get('__module__')
+    for name, value in ns.items():
+        setattr(proxy, name, value)
+
+    fields = {}
+    for base in reversed(bases):
+        for cls in getattr(base, '__mro__', (base,))[-1::-1]:
+            base_fields = getattr(cls, _FIELDS, None)
+            if base_fields is not None:
+                fields.update(base_fields)
+
+    dataclasses = sys.modules[__name__]
+    kw_only = False
+    defined_fields = {}
+    for name, type in annotations.items():
+        if isinstance(type, str):
+            a_type_annotation = _get_type_from_annotation(type, proxy)
+        else:
+            a_type_annotation = type
+        if _is_kw_only(a_type_annotation, dataclasses):
+            kw_only = True
+            continue
+        f = _get_field(proxy, name, type, kw_only)
+        fields[f.name] = f
+        if f._field_type is _FIELD:
+            defined_fields[f.name] = f
+
+    field_names = tuple(
+        f.name for f in fields.values() if f._field_type is _FIELD)
+    inherited_classes = itertools.chain.from_iterable(
+        getattr(base, '__mro__', (base,))[:-1] for base in bases)
+    inherited_slots = set(
+        itertools.chain.from_iterable(map(_get_slots, inherited_classes))
+    )
+    return _create_slots(defined_fields, inherited_slots, field_names,
+                         weakref_slot)
+
+
+def _add_dataclass_builder_slots(ns, bases, dataclass_kwds):
+    defaults = {}
+    weakref_slot = dataclass_kwds.get('weakref_slot', False)
+    ns['__slots__'] = _get_dataclass_builder_slots(ns, bases, weakref_slot)
+    for slot in ns['__slots__']:
+        if slot in ns:
+            defaults[slot] = ns.pop(slot)
+    if defaults:
+        ns[_BUILDER_DEFAULTS] = defaults
+
+
+def _dataclass_build_class(func, name, *bases, **kwds):
+    dataclass_kwds, class_kwds = _split_dataclass_build_class_kwargs(kwds)
+    slots = dataclass_kwds.get('slots', False)
+    resolved_bases = types.resolve_bases(bases)
+
+    def exec_body(ns):
+        types.exec_class_body(func, ns)
+        if slots:
+            _add_dataclass_builder_slots(ns, resolved_bases, dataclass_kwds)
+        if resolved_bases is not bases:
+            ns['__orig_bases__'] = bases
+
+    cls = types.new_class(name, resolved_bases, class_kwds, exec_body)
+    if slots:
+        return _process_class(
+            cls,
+            init=dataclass_kwds.get('init', True),
+            repr=dataclass_kwds.get('repr', True),
+            eq=dataclass_kwds.get('eq', True),
+            order=dataclass_kwds.get('order', False),
+            unsafe_hash=dataclass_kwds.get('unsafe_hash', False),
+            frozen=dataclass_kwds.get('frozen', False),
+            match_args=dataclass_kwds.get('match_args', True),
+            kw_only=dataclass_kwds.get('kw_only', False),
+            slots=True,
+            weakref_slot=dataclass_kwds.get('weakref_slot', False),
+            slots_already_added=True,
+        )
+    return dataclass(cls, **dataclass_kwds)
+
+
+dataclass.__build_class__ = _dataclass_build_class
 
 
 def fields(class_or_instance):

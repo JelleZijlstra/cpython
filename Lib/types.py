@@ -93,6 +93,10 @@ def new_class(name, bases=(), kwds=None, exec_body=None):
         ns['__orig_bases__'] = bases
     return meta(name, resolved_bases, ns, **kwds)
 
+def exec_class_body(func, ns):
+    """Execute a class body function in the given namespace."""
+    exec(func.__code__, func.__globals__, ns, closure=func.__closure__)
+
 def resolve_bases(bases):
     """Resolve MRO entries dynamically as specified by PEP 560."""
     new_bases = list(bases)

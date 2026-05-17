@@ -143,6 +143,7 @@ compound_stmt[stmt_ty]:
     | &'try' try_stmt
     | &'while' while_stmt
     | match_stmt
+    | &(NAME NAME) class_def
 
 # SIMPLE STATEMENTS
 # =================
@@ -282,7 +283,12 @@ class_def_raw[stmt_ty]:
         _PyAST_ClassDef(a->v.Name.id,
                      (b) ? ((expr_ty) b)->v.Call.args : NULL,
                      (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
-                     c, NULL, t, EXTRA) }
+                     c, NULL, t, NULL, EXTRA) }
+    | builder=NAME a=NAME t=[type_params] b=['(' z=[arguments] ')' { z }] ':' c=block {
+        _PyAST_ClassDef(a->v.Name.id,
+                     (b) ? ((expr_ty) b)->v.Call.args : NULL,
+                     (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
+                     c, NULL, t, builder, EXTRA) }
 
 # Function definitions
 # --------------------

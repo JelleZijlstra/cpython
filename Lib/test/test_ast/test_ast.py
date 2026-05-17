@@ -2145,7 +2145,8 @@ class ASTValidatorTests(unittest.TestCase):
         self.assertTrue(matcher(funcdef))
 
     def test_classdef(self):
-        def cls(bases=None, keywords=None, body=None, decorator_list=None, type_params=None):
+        def cls(bases=None, keywords=None, body=None,
+                decorator_list=None, type_params=None, builder=None):
             if bases is None:
                 bases = []
             if keywords is None:
@@ -2157,7 +2158,7 @@ class ASTValidatorTests(unittest.TestCase):
             if type_params is None:
                 type_params = []
             return ast.ClassDef("myclass", bases, keywords,
-                                body, decorator_list, type_params)
+                                body, decorator_list, type_params, builder)
         self.stmt(cls(bases=[ast.Name("x", ast.Store())]),
                   "must have Load context")
         self.stmt(cls(keywords=[ast.keyword("x", ast.Name("x", ast.Store()))]),
@@ -2165,6 +2166,8 @@ class ASTValidatorTests(unittest.TestCase):
         self.stmt(cls(body=[]), "empty body on ClassDef")
         self.stmt(cls(body=[None]), "None disallowed")
         self.stmt(cls(decorator_list=[ast.Name("x", ast.Store())]),
+                  "must have Load context")
+        self.stmt(cls(builder=ast.Name("x", ast.Store())),
                   "must have Load context")
 
     def test_delete(self):
@@ -2816,6 +2819,19 @@ class EndPositionTests(unittest.TestCase):
         ''').strip()
         cdef = ast.parse(s).body[0]
         self._check_end_pos(cdef, 2, 14)
+        self._check_content(s, cdef.bases[1], 'B')
+        self._check_content(s, cdef.body[0], 'x: int = 0')
+
+    def test_class_def_builder(self):
+        s = dedent('''
+            builder C(A, B):
+                x: int = 0
+        ''').strip()
+        cdef = ast.parse(s).body[0]
+        self.assertIsInstance(cdef.builder, ast.Name)
+        self.assertEqual(cdef.builder.id, "builder")
+        self.assertEqual(cdef.name, "C")
+        self._check_content(s, cdef.builder, 'builder')
         self._check_content(s, cdef.bases[1], 'B')
         self._check_content(s, cdef.body[0], 'x: int = 0')
 

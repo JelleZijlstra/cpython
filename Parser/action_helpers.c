@@ -760,7 +760,7 @@ _PyPegen_class_def_decorators(Parser *p, asdl_expr_seq *decorators, stmt_ty clas
         class_def->v.ClassDef.name,
         class_def->v.ClassDef.bases, class_def->v.ClassDef.keywords,
         class_def->v.ClassDef.body, decorators,
-        class_def->v.ClassDef.type_params,
+        class_def->v.ClassDef.type_params, class_def->v.ClassDef.builder,
         class_def->lineno, class_def->col_offset, class_def->end_lineno,
         class_def->end_col_offset, p->arena);
 }

@@ -1568,7 +1568,8 @@ codegen_set_type_params_in_class(compiler *c, location loc)
 
 
 static int
-codegen_class_body(compiler *c, stmt_ty s, int firstlineno)
+codegen_class_body(compiler *c, stmt_ty s, int firstlineno,
+                   int builder_is_type_param_arg)
 {
     /* ultimately generate code for:
          <name> = __build_class__(<func>, <name>, *<bases>, **<keywords>)
@@ -1661,8 +1662,24 @@ codegen_class_body(compiler *c, stmt_ty s, int firstlineno)
     // these instructions should be attributed to the class line,
     // not a decorator line
     loc = LOC(s);
-    ADDOP(c, loc, LOAD_BUILD_CLASS);
-    ADDOP(c, loc, PUSH_NULL);
+    if (builder_is_type_param_arg) {
+        PyObject *builder = PyUnicode_InternFromString(".builder");
+        if (builder == NULL) {
+            return ERROR;
+        }
+        int ret = codegen_nameop(c, loc, builder, Load);
+        Py_DECREF(builder);
+        RETURN_IF_ERROR(ret);
+        ADDOP(c, loc, PUSH_NULL);
+    }
+    else if (s->v.ClassDef.builder) {
+        VISIT(c, expr, s->v.ClassDef.builder);
+        ADDOP_NAME(c, loc, LOAD_METHOD, &_Py_ID(__build_class__), names);
+    }
+    else {
+        ADDOP(c, loc, LOAD_BUILD_CLASS);
+        ADDOP(c, loc, PUSH_NULL);
+    }
 
     /* 3. load a function (or closure) made from the code object */
     int ret = codegen_make_closure(c, loc, co, 0);
@@ -1690,14 +1707,23 @@ codegen_class(compiler *c, stmt_ty s)
 
     asdl_type_param_seq *type_params = s->v.ClassDef.type_params;
     int is_generic = asdl_seq_LEN(type_params) > 0;
+    int has_builder = s->v.ClassDef.builder != NULL;
     if (is_generic) {
+        if (has_builder) {
+            VISIT(c, expr, s->v.ClassDef.builder);
+            ADDOP_NAME(c, loc, LOAD_ATTR, &_Py_ID(__build_class__), names);
+        }
         PyObject *type_params_name = PyUnicode_FromFormat("<generic parameters of %U>",
                                                          s->v.ClassDef.name);
         if (!type_params_name) {
             return ERROR;
         }
+        _PyCompile_CodeUnitMetadata umd = {
+            .u_argcount = has_builder ? 1 : 0,
+        };
         int ret = codegen_enter_scope(c, type_params_name, COMPILE_SCOPE_ANNOTATIONS,
-                                      (void *)type_params, firstlineno, s->v.ClassDef.name, NULL);
+                                      (void *)type_params, firstlineno,
+                                      s->v.ClassDef.name, &umd);
         Py_DECREF(type_params_name);
         RETURN_IF_ERROR(ret);
         RETURN_IF_ERROR_IN_SCOPE(c, codegen_type_params(c, type_params));
@@ -1705,7 +1731,7 @@ codegen_class(compiler *c, stmt_ty s)
         RETURN_IF_ERROR_IN_SCOPE(c, codegen_nameop(c, loc, &_Py_STR(type_params), Store));
     }
 
-    int ret = codegen_class_body(c, s, firstlineno);
+    int ret = codegen_class_body(c, s, firstlineno, is_generic && has_builder);
     if (is_generic) {
         RETURN_IF_ERROR_IN_SCOPE(c, ret);
     }
@@ -1736,8 +1762,14 @@ codegen_class(compiler *c, stmt_ty s)
         int ret = codegen_make_closure(c, loc, co, 0);
         Py_DECREF(co);
         RETURN_IF_ERROR(ret);
-        ADDOP(c, loc, PUSH_NULL);
-        ADDOP_I(c, loc, CALL, 0);
+        if (has_builder) {
+            ADDOP_I(c, loc, SWAP, 2);
+            ADDOP_I(c, loc, CALL, 0);
+        }
+        else {
+            ADDOP(c, loc, PUSH_NULL);
+            ADDOP_I(c, loc, CALL, 0);
+        }
     } else {
         RETURN_IF_ERROR(codegen_call_helper(c, loc, 2,
                                             s->v.ClassDef.bases,

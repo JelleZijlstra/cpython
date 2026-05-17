@@ -1,3 +1,4 @@
+import builtins
 import contextlib
 import dis
 import io
@@ -38,6 +39,92 @@ class TestSpecifics(unittest.TestCase):
 
     def test_empty(self):
         compile("", "<test>", "exec")
+
+    def test_class_builder(self):
+        class Builder:
+            def __init__(self):
+                self.seen = []
+
+            def __build_class__(self, func, name, *bases, **kwds):
+                self.seen.append((func.__name__, name, bases, kwds))
+                return builtins.__build_class__(func, name, *bases, **kwds)
+
+        builder = Builder()
+        class Base:
+            def __init_subclass__(cls, answer=None):
+                cls.answer = answer
+
+        ns = {"builder": builder, "base": Base}
+        exec(textwrap.dedent("""
+            builder C(base, answer=42):
+                attr = "ok"
+        """), ns)
+
+        self.assertEqual(builder.seen, [("C", "C", (Base,), {"answer": 42})])
+        self.assertEqual(ns["C"].attr, "ok")
+        self.assertEqual(ns["C"].answer, 42)
+
+    def test_generic_class_builder(self):
+        class Builder:
+            def __init__(self):
+                self.seen = []
+
+            def __build_class__(self, func, name, *bases, **kwds):
+                self.seen.append((func.__name__, name, bases, kwds))
+                return builtins.__build_class__(func, name, *bases, **kwds)
+
+        def make():
+            builder = Builder()
+            builder C[T](list[T]):
+                pass
+            return builder, C
+
+        builder, C = make()
+        self.assertEqual(builder.seen[0][:2], ("C", "C"))
+        self.assertEqual(C.__type_params__[0].__name__, "T")
+        self.assertEqual(builder.seen[0][2][0].__origin__, list)
+
+    def test_class_builder_soft_keyword_names(self):
+        class Builder:
+            def __init__(self):
+                self.seen = []
+
+            def __build_class__(self, func, name, *bases, **kwds):
+                self.seen.append(name)
+                return builtins.__build_class__(func, name, *bases, **kwds)
+
+        ns = {name: Builder() for name in ("case", "type", "_", "match")}
+        exec(textwrap.dedent("""
+            case C:
+                pass
+            type T:
+                pass
+            _ U:
+                pass
+            match M:
+                pass
+        """), ns)
+
+        self.assertEqual(ns["case"].seen, ["C"])
+        self.assertEqual(ns["type"].seen, ["T"])
+        self.assertEqual(ns["_"].seen, ["U"])
+        self.assertEqual(ns["match"].seen, ["M"])
+
+    def test_match_statement_still_preferred_over_builder(self):
+        class Builder:
+            def __build_class__(self, func, name, *bases, **kwds):
+                raise AssertionError("builder should not be called")
+
+        ns = {"match": Builder()}
+        exec(textwrap.dedent("""
+            result = None
+            subject = 1
+            match subject:
+                case 1:
+                    result = "matched"
+        """), ns)
+
+        self.assertEqual(ns["result"], "matched")
 
     def test_other_newlines(self):
         compile("\r\n", "<test>", "exec")

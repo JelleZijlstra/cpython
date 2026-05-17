@@ -25,7 +25,7 @@ from typing import T, KT, VT  # Not in __all__.
 from typing import Union, Optional, Literal
 from typing import Tuple, List, Dict, MutableMapping
 from typing import Callable
-from typing import Generic, ClassVar, Final, final, Protocol
+from typing import Generic, ClassVar, Final, final, Protocol, protocol
 from typing import assert_type, cast, runtime_checkable
 from typing import get_type_hints
 from typing import get_origin, get_args, get_protocol_members
@@ -35,7 +35,10 @@ from typing import reveal_type
 from typing import dataclass_transform
 from typing import no_type_check
 from typing import Type
-from typing import NamedTuple, NotRequired, Required, ReadOnly, TypedDict, NoExtraItems
+from typing import (
+    NamedTuple, namedtuple, NotRequired, Required, ReadOnly, TypedDict,
+    typeddict, NoExtraItems,
+)
 from typing import IO, TextIO, BinaryIO
 from typing import Pattern, Match
 from typing import Annotated, ForwardRef
@@ -2906,6 +2909,18 @@ class HasCallProtocol(Protocol):
 
 
 class ProtocolTests(BaseTestCase):
+    def test_protocol_builder_syntax(self):
+        class Base(Protocol):
+            def base(self) -> int: ...
+
+        protocol P(Base):
+            attr: int
+            def meth(self) -> str: ...
+
+        self.assertIsSubclass(P, Protocol)
+        self.assertTrue(is_protocol(P))
+        self.assertEqual(get_protocol_members(P), {"attr", "base", "meth"})
+
     def test_basic_protocol(self):
         @runtime_checkable
         class P(Protocol):
@@ -8233,6 +8248,15 @@ class NamedTupleTests(BaseTestCase):
         name: str
         cool: int
 
+    def test_namedtuple_builder_syntax(self):
+        namedtuple Emp:
+            name: str
+            id: int
+
+        self.assertIsSubclass(Emp, tuple)
+        self.assertEqual(Emp._fields, ("name", "id"))
+        self.assertEqual(Emp("Joe", 42).name, "Joe")
+
     def test_basics(self):
         Emp = NamedTuple('Emp', [('name', str), ('id', int)])
         self.assertIsSubclass(Emp, tuple)
@@ -8617,6 +8641,16 @@ class NamedTupleTests(BaseTestCase):
 
 
 class TypedDictTests(BaseTestCase):
+    def test_typeddict_builder_syntax(self):
+        typeddict Emp:
+            name: str
+            id: int
+
+        self.assertTrue(is_typeddict(Emp))
+        self.assertEqual(Emp.__annotations__, {"name": str, "id": int})
+        self.assertEqual(Emp.__required_keys__, {"name", "id"})
+        self.assertEqual(Emp(name="Jim", id=1), {"name": "Jim", "id": 1})
+
     def test_basics_functional_syntax(self):
         Emp = TypedDict('Emp', {'name': str, 'id': int})
         self.assertIsSubclass(Emp, dict)
