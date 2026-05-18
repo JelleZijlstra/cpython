@@ -393,7 +393,12 @@ class Unparser(NodeVisitor):
         for deco in node.decorator_list:
             self.fill("@", allow_semicolon=False)
             self.traverse(deco)
-        self.fill("class " + node.name, allow_semicolon=False)
+        if node.builder is None:
+            self.fill("class " + node.name, allow_semicolon=False)
+        else:
+            self.fill(allow_semicolon=False)
+            self.traverse(node.builder)
+            self.write(" " + node.name)
         if hasattr(node, "type_params"):
             self._type_params_helper(node.type_params)
         with self.delimit_if("(", ")", condition = node.bases or node.keywords):
