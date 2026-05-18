@@ -1234,7 +1234,14 @@ class TracebackException:
         elif exc_type and issubclass(exc_type, NameError) and \
                 getattr(exc_value, "name", None) is not None:
             wrong_name = getattr(exc_value, "name", None)
-            suggestion = _compute_suggestion_error(exc_value, exc_traceback, wrong_name)
+            builder_hint = _compute_class_builder_name_error_hint(
+                wrong_name, self.stack)
+            suggestion = None
+            if builder_hint:
+                self._str += f". {builder_hint}"
+            else:
+                suggestion = _compute_suggestion_error(
+                    exc_value, exc_traceback, wrong_name)
             if suggestion:
                 if suggestion.isascii():
                     self._str += f". Did you mean: '{suggestion}'?"
@@ -1992,6 +1999,63 @@ def _compute_suggestion_error(exc_value, tb, wrong_name):
                 return nested_suggestion
 
     return suggestion
+
+
+def _tokenize_line(line):
+    try:
+        return list(tokenize.generate_tokens(io.StringIO(line).readline))
+    except tokenize.TokenError:
+        return []
+
+
+def _looks_like_class_builder_header(line, wrong_name):
+    tokens = [
+        token for token in _tokenize_line(line)
+        if token.type not in {
+            tokenize.ENCODING, tokenize.INDENT, tokenize.DEDENT,
+            tokenize.NL, tokenize.NEWLINE, tokenize.ENDMARKER,
+        }
+    ]
+    if len(tokens) < 3:
+        return False
+    if tokens[0].type != tokenize.NAME or tokens[0].string != wrong_name:
+        return False
+    if tokens[1].type != tokenize.NAME:
+        return False
+    return tokens[2].string in {":", "(", "["}
+
+
+def _compute_class_builder_name_error_hint(wrong_name, stack):
+    if wrong_name is None or not isinstance(wrong_name, str):
+        return None
+    if not stack:
+        return None
+    line = stack[-1].line
+    if not line or not _looks_like_class_builder_header(line, wrong_name):
+        return None
+
+    if wrong_name == "match":
+        return "Did you mean to use a 'match' statement with 'case' clauses?"
+    if wrong_name == "case":
+        return "Did you mean to use a 'case' pattern inside a 'match' statement?"
+
+    candidates = [name for name in keyword.kwlist + keyword.softkwlist
+                  if name != "_"]
+    try:
+        import _suggestions
+    except ImportError:
+        pass
+    else:
+        suggestion = _suggestions._generate_suggestions(candidates, wrong_name)
+        if suggestion:
+            return f"Did you mean: '{suggestion}'?"
+
+    import difflib
+    suggestions = difflib.get_close_matches(
+        wrong_name, candidates, n=1, cutoff=0.5)
+    if suggestions:
+        return f"Did you mean: '{suggestions[0]}'?"
+    return None
 
 
 def _levenshtein_distance(a, b, max_cost):

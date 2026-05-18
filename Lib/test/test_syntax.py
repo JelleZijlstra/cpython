@@ -353,10 +353,14 @@ SyntaxError: invalid syntax. Perhaps you forgot a comma?
 # Make sure soft keywords constructs don't raise specialized
 # errors regarding missing commas or other spezialiced errors
 
->>> match x:
-...     y = 3
-Traceback (most recent call last):
-SyntaxError: invalid syntax
+>>> import linecache, traceback
+
+>>> try:
+...     match x:
+...         y = 3
+... except NameError as e:
+...     print(traceback.format_exception(e)[-1], end="")
+NameError: name 'match' is not defined. Did you mean to use a 'match' statement with 'case' clauses?
 
 >>> match x:
 ...     case y:
@@ -394,13 +398,17 @@ SyntaxError: case statement must be inside match statement
 Traceback (most recent call last):
 SyntaxError: case statement must be inside match statement
 
->>> case match: ...
-Traceback (most recent call last):
-SyntaxError: case statement must be inside match statement
+>>> try:
+...     case match: ...
+... except NameError as e:
+...     print(traceback.format_exception(e)[-1], end="")
+NameError: name 'case' is not defined. Did you mean to use a 'case' pattern inside a 'match' statement?
 
->>> case case: ...
-Traceback (most recent call last):
-SyntaxError: case statement must be inside match statement
+>>> try:
+...     case case: ...
+... except NameError as e:
+...     print(traceback.format_exception(e)[-1], end="")
+NameError: name 'case' is not defined. Did you mean to use a 'case' pattern inside a 'match' statement?
 
 >>> if some:
 ...     case 1: ...
@@ -1832,12 +1840,14 @@ SyntaxError: invalid syntax. Did you mean 'else'?
 Traceback (most recent call last):
 SyntaxError: invalid syntax. Did you mean 'if'?
 
->>> if x:
-...   pass
-... elseif y:
-...   pass
-Traceback (most recent call last):
-SyntaxError: invalid syntax. Did you mean 'elif'?
+>>> try:
+...   source = "x = y = 1\\nif x:\\n  pass\\nelseif y:\\n  pass"
+...   filename = "<elseif-builder-test>"
+...   linecache.cache[filename] = (len(source), None, source.splitlines(True), filename)
+...   exec(compile(source, filename, "exec"))
+... except NameError as e:
+...   print(traceback.format_exception(e)[-1], end="")
+NameError: name 'elseif' is not defined. Did you mean: 'elif'?
 
 >>> if x:
 ...   pass
@@ -1855,10 +1865,12 @@ SyntaxError: invalid syntax. Did you mean 'else'?
 Traceback (most recent call last):
 SyntaxError: invalid syntax. Did you mean 'try'?
 
->>> classe MyClass:
-...   pass
-Traceback (most recent call last):
-SyntaxError: invalid syntax. Did you mean 'class'?
+>>> try:
+...   classe MyClass:
+...     pass
+... except NameError as e:
+...   print(traceback.format_exception(e)[-1], end="")
+NameError: name 'classe' is not defined. Did you mean: 'class'?
 
 >>> impor math
 Traceback (most recent call last):
@@ -1871,16 +1883,18 @@ SyntaxError: invalid syntax. Did you mean 'from'?
 >>> defn calculate_sum(a, b):
 ...   return a + b
 Traceback (most recent call last):
-SyntaxError: invalid syntax. Did you mean 'def'?
+SyntaxError: 'return' outside function
 
 >>> def foo():
 ...   returm result
 Traceback (most recent call last):
 SyntaxError: invalid syntax. Did you mean 'return'?
 
->>> lamda x: x ** 2
-Traceback (most recent call last):
-SyntaxError: invalid syntax. Did you mean 'lambda'?
+>>> try:
+...   lamda x: x ** 2
+... except NameError as e:
+...   print(traceback.format_exception(e)[-1], end="")
+NameError: name 'lamda' is not defined. Did you mean: 'lambda'?
 
 >>> def foo():
 ...   yeld i
