@@ -2909,11 +2909,11 @@ class HasCallProtocol(Protocol):
 
 
 class ProtocolTests(BaseTestCase):
-    def test_protocol_builder_syntax(self):
+    def test_protocol_maker_syntax(self):
         class Base(Protocol):
             def base(self) -> int: ...
 
-        protocol P(Base):
+        make protocol P(Base):
             attr: int
             def meth(self) -> str: ...
 
@@ -8248,8 +8248,8 @@ class NamedTupleTests(BaseTestCase):
         name: str
         cool: int
 
-    def test_namedtuple_builder_syntax(self):
-        namedtuple Emp:
+    def test_namedtuple_maker_syntax(self):
+        make namedtuple Emp:
             name: str
             id: int
 
@@ -8641,8 +8641,8 @@ class NamedTupleTests(BaseTestCase):
 
 
 class TypedDictTests(BaseTestCase):
-    def test_typeddict_builder_syntax(self):
-        typeddict Emp:
+    def test_typeddict_maker_syntax(self):
+        make typeddict Emp:
             name: str
             id: int
 

@@ -3395,12 +3395,12 @@ _TypedDict = type.__new__(_TypedDictMeta, 'TypedDict', (), {})
 TypedDict.__mro_entries__ = lambda bases: (_TypedDict,)
 
 
-class _ClassBuilder:
+class _ClassMaker:
     def __init__(self, default_bases, *, append_default=False):
         self._default_bases = default_bases
         self._append_default = append_default
 
-    def __build_class__(self, func, name, *bases, **kwds):
+    def __make__(self, func, name, *bases, **kwds):
         if self._append_default:
             bases = (*bases, *self._default_bases)
         elif not bases:
@@ -3408,9 +3408,9 @@ class _ClassBuilder:
         return builtins.__build_class__(func, name, *bases, **kwds)
 
 
-protocol = _ClassBuilder((Protocol,), append_default=True)
-typeddict = _ClassBuilder((TypedDict,), append_default=True)
-namedtuple = _ClassBuilder((NamedTuple,))
+protocol = _ClassMaker((Protocol,), append_default=True)
+typeddict = _ClassMaker((TypedDict,), append_default=True)
+namedtuple = _ClassMaker((NamedTuple,))
 
 
 @_SpecialForm

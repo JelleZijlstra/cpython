@@ -1465,9 +1465,9 @@ class ClassCreationTests(unittest.TestCase):
                     ns["extra"] = 42
                 return types.new_class(name, bases, kwds, exec_body)
 
-        builder = Builder()
+        maker = Builder()
 
-        builder C:
+        make maker C:
             x = 1
 
             def get_class(self):

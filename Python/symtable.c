@@ -1662,7 +1662,7 @@ symtable_add_def(struct symtable *st, PyObject *name, int flag,
 static int
 symtable_enter_type_param_block(struct symtable *st, identifier name,
                                void *ast, int has_defaults, int has_kwdefaults,
-                               int has_class_builder, enum _stmt_kind kind,
+                               int has_class_maker, enum _stmt_kind kind,
                                _Py_SourceLocation loc)
 {
     _Py_block_ty current_type = st->st_cur->ste_type;
@@ -1676,13 +1676,13 @@ symtable_enter_type_param_block(struct symtable *st, identifier name,
         }
     }
     if (kind == ClassDef_kind) {
-        if (has_class_builder) {
-            PyObject *builder = PyUnicode_InternFromString(".builder");
-            if (builder == NULL) {
+        if (has_class_maker) {
+            PyObject *maker = PyUnicode_InternFromString(".maker");
+            if (maker == NULL) {
                 return 0;
             }
-            int result = symtable_add_def(st, builder, DEF_PARAM, loc);
-            Py_DECREF(builder);
+            int result = symtable_add_def(st, maker, DEF_PARAM, loc);
+            Py_DECREF(maker);
             if (!result) {
                 return 0;
             }
@@ -1961,15 +1961,15 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
             return 0;
         if (s->v.ClassDef.decorator_list)
             VISIT_SEQ(st, expr, s->v.ClassDef.decorator_list);
-        if (s->v.ClassDef.builder) {
-            VISIT(st, expr, s->v.ClassDef.builder);
+        if (s->v.ClassDef.maker) {
+            VISIT(st, expr, s->v.ClassDef.maker);
         }
         tmp = st->st_private;
         if (asdl_seq_LEN(s->v.ClassDef.type_params) > 0) {
             if (!symtable_enter_type_param_block(st, s->v.ClassDef.name,
                                                 (void *)s->v.ClassDef.type_params,
                                                 false, false,
-                                                s->v.ClassDef.builder != NULL,
+                                                s->v.ClassDef.maker != NULL,
                                                 s->kind,
                                                 LOCATION(s))) {
                 return 0;

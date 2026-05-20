@@ -82,6 +82,7 @@ static char *soft_keywords[] = {
     "_",
     "case",
     "lazy",
+    "make",
     "match",
     "type",
     NULL,
@@ -4496,7 +4497,7 @@ class_def_rule(Parser *p)
 // class_def_raw:
 //     | invalid_class_def_raw
 //     | 'class' NAME type_params? ['(' arguments? ')'] ':' block
-//     | NAME NAME type_params? ['(' arguments? ')'] ':' block
+//     | "make" NAME NAME type_params? ['(' arguments? ')'] ':' block
 static stmt_ty
 class_def_raw_rule(Parser *p)
 {
@@ -4585,20 +4586,23 @@ class_def_raw_rule(Parser *p)
         D(fprintf(stderr, "%*c%s class_def_raw[%d-%d]: %s failed!\n", p->level, ' ',
                   p->error_indicator ? "ERROR!" : "-", _mark, p->mark, "'class' NAME type_params? ['(' arguments? ')'] ':' block"));
     }
-    { // NAME NAME type_params? ['(' arguments? ')'] ':' block
+    { // "make" NAME NAME type_params? ['(' arguments? ')'] ':' block
         if (p->error_indicator) {
             p->level--;
             return NULL;
         }
-        D(fprintf(stderr, "%*c> class_def_raw[%d-%d]: %s\n", p->level, ' ', _mark, p->mark, "NAME NAME type_params? ['(' arguments? ')'] ':' block"));
+        D(fprintf(stderr, "%*c> class_def_raw[%d-%d]: %s\n", p->level, ' ', _mark, p->mark, "\"make\" NAME NAME type_params? ['(' arguments? ')'] ':' block"));
+        expr_ty _keyword;
         Token * _literal;
         expr_ty a;
         void *b;
-        expr_ty builder;
         asdl_stmt_seq* c;
+        expr_ty maker;
         void *t;
         if (
-            (builder = _PyPegen_name_token(p))  // NAME
+            (_keyword = _PyPegen_expect_soft_keyword(p, "make"))  // soft_keyword='"make"'
+            &&
+            (maker = _PyPegen_name_token(p))  // NAME
             &&
             (a = _PyPegen_name_token(p))  // NAME
             &&
@@ -4611,7 +4615,7 @@ class_def_raw_rule(Parser *p)
             (c = block_rule(p))  // block
         )
         {
-            D(fprintf(stderr, "%*c+ class_def_raw[%d-%d]: %s succeeded!\n", p->level, ' ', _mark, p->mark, "NAME NAME type_params? ['(' arguments? ')'] ':' block"));
+            D(fprintf(stderr, "%*c+ class_def_raw[%d-%d]: %s succeeded!\n", p->level, ' ', _mark, p->mark, "\"make\" NAME NAME type_params? ['(' arguments? ')'] ':' block"));
             Token *_token = _PyPegen_get_last_nonnwhitespace_token(p);
             if (_token == NULL) {
                 p->level--;
@@ -4621,7 +4625,7 @@ class_def_raw_rule(Parser *p)
             UNUSED(_end_lineno); // Only used by EXTRA macro
             int _end_col_offset = _token->end_col_offset;
             UNUSED(_end_col_offset); // Only used by EXTRA macro
-            _res = _PyAST_ClassDef ( a -> v . Name . id , ( b ) ? ( ( expr_ty ) b ) -> v . Call . args : NULL , ( b ) ? ( ( expr_ty ) b ) -> v . Call . keywords : NULL , c , NULL , t , builder , EXTRA );
+            _res = _PyAST_ClassDef ( a -> v . Name . id , ( b ) ? ( ( expr_ty ) b ) -> v . Call . args : NULL , ( b ) ? ( ( expr_ty ) b ) -> v . Call . keywords : NULL , c , NULL , t , maker , EXTRA );
             if ((_res == NULL || p->error_indicator) && PyErr_Occurred()) {
                 p->error_indicator = 1;
                 p->level--;
@@ -4631,7 +4635,7 @@ class_def_raw_rule(Parser *p)
         }
         p->mark = _mark;
         D(fprintf(stderr, "%*c%s class_def_raw[%d-%d]: %s failed!\n", p->level, ' ',
-                  p->error_indicator ? "ERROR!" : "-", _mark, p->mark, "NAME NAME type_params? ['(' arguments? ')'] ':' block"));
+                  p->error_indicator ? "ERROR!" : "-", _mark, p->mark, "\"make\" NAME NAME type_params? ['(' arguments? ')'] ':' block"));
     }
     _res = NULL;
   done:

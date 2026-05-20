@@ -747,8 +747,8 @@ validate_stmt(stmt_ty stmt)
             validate_exprs(stmt->v.ClassDef.bases, Load, 0) &&
             validate_keywords(stmt->v.ClassDef.keywords) &&
             validate_exprs(stmt->v.ClassDef.decorator_list, Load, 0) &&
-            (!stmt->v.ClassDef.builder ||
-             validate_expr(stmt->v.ClassDef.builder, Load));
+            (!stmt->v.ClassDef.maker ||
+             validate_expr(stmt->v.ClassDef.maker, Load));
         break;
     case Return_kind:
         ret = !stmt->v.Return.value || validate_expr(stmt->v.Return.value, Load);

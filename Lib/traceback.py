@@ -1234,11 +1234,11 @@ class TracebackException:
         elif exc_type and issubclass(exc_type, NameError) and \
                 getattr(exc_value, "name", None) is not None:
             wrong_name = getattr(exc_value, "name", None)
-            builder_hint = _compute_class_builder_name_error_hint(
+            maker_hint = _compute_class_maker_name_error_hint(
                 wrong_name, self.stack)
             suggestion = None
-            if builder_hint:
-                self._str += f". {builder_hint}"
+            if maker_hint:
+                self._str += f". {maker_hint}"
             else:
                 suggestion = _compute_suggestion_error(
                     exc_value, exc_traceback, wrong_name)
@@ -2008,7 +2008,7 @@ def _tokenize_line(line):
         return []
 
 
-def _looks_like_class_builder_header(line, wrong_name):
+def _looks_like_class_maker_header(line, wrong_name):
     tokens = [
         token for token in _tokenize_line(line)
         if token.type not in {
@@ -2016,22 +2016,24 @@ def _looks_like_class_builder_header(line, wrong_name):
             tokenize.NL, tokenize.NEWLINE, tokenize.ENDMARKER,
         }
     ]
-    if len(tokens) < 3:
+    if len(tokens) < 4:
         return False
-    if tokens[0].type != tokenize.NAME or tokens[0].string != wrong_name:
+    if tokens[0].type != tokenize.NAME or tokens[0].string != "make":
         return False
-    if tokens[1].type != tokenize.NAME:
+    if tokens[1].type != tokenize.NAME or tokens[1].string != wrong_name:
         return False
-    return tokens[2].string in {":", "(", "["}
+    if tokens[2].type != tokenize.NAME:
+        return False
+    return tokens[3].string in {":", "(", "["}
 
 
-def _compute_class_builder_name_error_hint(wrong_name, stack):
+def _compute_class_maker_name_error_hint(wrong_name, stack):
     if wrong_name is None or not isinstance(wrong_name, str):
         return None
     if not stack:
         return None
     line = stack[-1].line
-    if not line or not _looks_like_class_builder_header(line, wrong_name):
+    if not line or not _looks_like_class_maker_header(line, wrong_name):
         return None
 
     if wrong_name == "match":

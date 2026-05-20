@@ -284,11 +284,11 @@ class_def_raw[stmt_ty]:
                      (b) ? ((expr_ty) b)->v.Call.args : NULL,
                      (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
                      c, NULL, t, NULL, EXTRA) }
-    | builder=NAME a=NAME t=[type_params] b=['(' z=[arguments] ')' { z }] ':' c=block {
+    | "make" maker=NAME a=NAME t=[type_params] b=['(' z=[arguments] ')' { z }] ':' c=block {
         _PyAST_ClassDef(a->v.Name.id,
                      (b) ? ((expr_ty) b)->v.Call.args : NULL,
                      (b) ? ((expr_ty) b)->v.Call.keywords : NULL,
-                     c, NULL, t, builder, EXTRA) }
+                     c, NULL, t, maker, EXTRA) }
 
 # Function definitions
 # --------------------

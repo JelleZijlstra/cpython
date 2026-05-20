@@ -67,37 +67,37 @@ class TestCase(unittest.TestCase):
         o = C(42)
         self.assertEqual(o.x, 42)
 
-    def test_dataclass_builder(self):
-        dataclass C:
+    def test_dataclass_maker(self):
+        make dataclass C:
             x: int
             y: int = 5
 
         self.assertTrue(is_dataclass(C))
         self.assertEqual(C(42), C(x=42, y=5))
 
-    def test_dataclass_builder_options(self):
-        dataclass C(frozen=True):
+    def test_dataclass_maker_options(self):
+        make dataclass C(frozen=True):
             x: int
 
         with self.assertRaises(FrozenInstanceError):
             C(42).x = 5
 
-    def test_dataclass_builder_type_params(self):
-        dataclass C[T]:
+    def test_dataclass_maker_type_params(self):
+        make dataclass C[T]:
             x: T
 
         self.assertTrue(is_dataclass(C))
         self.assertEqual(C.__type_params__[0].__name__, "T")
         self.assertEqual(C(42).x, 42)
 
-    def test_dataclass_builder_slots(self):
+    def test_dataclass_maker_slots(self):
         owners = []
 
         class Descriptor:
             def __set_name__(self, owner, name):
                 owners.append(owner)
 
-        dataclass C(slots=True):
+        make dataclass C(slots=True):
             x: int
             y: int = 5
             marker = Descriptor()

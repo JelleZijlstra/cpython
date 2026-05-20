@@ -206,8 +206,8 @@ _FIELDS = '__dataclass_fields__'
 # @dataclass.
 _PARAMS = '__dataclass_params__'
 
-# The name of a temporary attribute on builder-created slotted classes.
-_BUILDER_DEFAULTS = '__dataclass_builder_defaults__'
+# The name of a temporary attribute on maker-created slotted classes.
+_MAKER_DEFAULTS = '__dataclass_maker_defaults__'
 
 # The name of the function, that if it exists, is called at the end of
 # __init__.
@@ -824,9 +824,9 @@ def _get_field(cls, a_name, a_type, default_kw_only):
 
     # If the default value isn't derived from Field, then it's only a
     # normal default value.  Convert it to a Field().
-    builder_defaults = getattr(cls, _BUILDER_DEFAULTS, None)
-    if builder_defaults is not None and a_name in builder_defaults:
-        default = builder_defaults[a_name]
+    maker_defaults = getattr(cls, _MAKER_DEFAULTS, None)
+    if maker_defaults is not None and a_name in maker_defaults:
+        default = maker_defaults[a_name]
     else:
         default = getattr(cls, a_name, MISSING)
     if isinstance(default, Field):
@@ -1257,7 +1257,7 @@ def _process_class(cls, init, repr, eq, order, unsafe_hash, frozen,
 
     if slots_already_added:
         try:
-            delattr(cls, _BUILDER_DEFAULTS)
+            delattr(cls, _MAKER_DEFAULTS)
         except AttributeError:
             pass
 
@@ -1502,7 +1502,7 @@ def _split_dataclass_build_class_kwargs(kwds):
     return dataclass_kwds, class_kwds
 
 
-def _get_dataclass_builder_annotations(ns):
+def _get_dataclass_maker_annotations(ns):
     annotate = ns.get('__annotate_func__')
     if annotate is None:
         return ns.get('__annotations__', {})
@@ -1514,12 +1514,12 @@ class _DataclassBuilderNamespace:
     pass
 
 
-def _get_dataclass_builder_slots(ns, bases, weakref_slot):
+def _get_dataclass_maker_slots(ns, bases, weakref_slot):
     if '__slots__' in ns:
         name = ns.get('__qualname__', ns.get('__name__'))
         raise TypeError(f'{name} already specifies __slots__')
 
-    annotations = _get_dataclass_builder_annotations(ns)
+    annotations = _get_dataclass_maker_annotations(ns)
     proxy = _DataclassBuilderNamespace()
     proxy.__module__ = ns.get('__module__')
     for name, value in ns.items():
@@ -1559,15 +1559,15 @@ def _get_dataclass_builder_slots(ns, bases, weakref_slot):
                          weakref_slot)
 
 
-def _add_dataclass_builder_slots(ns, bases, dataclass_kwds):
+def _add_dataclass_maker_slots(ns, bases, dataclass_kwds):
     defaults = {}
     weakref_slot = dataclass_kwds.get('weakref_slot', False)
-    ns['__slots__'] = _get_dataclass_builder_slots(ns, bases, weakref_slot)
+    ns['__slots__'] = _get_dataclass_maker_slots(ns, bases, weakref_slot)
     for slot in ns['__slots__']:
         if slot in ns:
             defaults[slot] = ns.pop(slot)
     if defaults:
-        ns[_BUILDER_DEFAULTS] = defaults
+        ns[_MAKER_DEFAULTS] = defaults
 
 
 def _dataclass_build_class(func, name, *bases, **kwds):
@@ -1578,7 +1578,7 @@ def _dataclass_build_class(func, name, *bases, **kwds):
     def exec_body(ns):
         types.exec_class_body(func, ns)
         if slots:
-            _add_dataclass_builder_slots(ns, resolved_bases, dataclass_kwds)
+            _add_dataclass_maker_slots(ns, resolved_bases, dataclass_kwds)
         if resolved_bases is not bases:
             ns['__orig_bases__'] = bases
 
@@ -1601,7 +1601,7 @@ def _dataclass_build_class(func, name, *bases, **kwds):
     return dataclass(cls, **dataclass_kwds)
 
 
-dataclass.__build_class__ = _dataclass_build_class
+dataclass.__make__ = _dataclass_build_class
 
 
 def fields(class_or_instance):

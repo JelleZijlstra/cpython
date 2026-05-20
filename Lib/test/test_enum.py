@@ -1073,19 +1073,19 @@ class _FlagTests:
 class TestPlainEnumClass(_EnumTests, _PlainOutputTests, unittest.TestCase):
     enum_type = Enum
 
-    def test_enum_builder(self):
+    def test_enum_maker(self):
         ns = {}
         exec("""\
 from enum import enum, Enum
 
-enum Color:
+make enum Color:
     RED = 1
     BLUE = 2
 
-enum Label(str):
+make enum Label(str):
     RED = 'red'
 
-enum Explicit(Enum):
+make enum Explicit(Enum):
     RED = 1
 """, ns)
         Color = ns["Color"]

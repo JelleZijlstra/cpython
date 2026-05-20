@@ -1355,14 +1355,14 @@ class Enum(metaclass=EnumType):
         return self._value_
 
 
-class _EnumClassBuilder:
-    def __build_class__(self, func, name, *bases, **kwds):
+class _EnumClassMaker:
+    def __make__(self, func, name, *bases, **kwds):
         if any(isinstance(base, EnumType) for base in bases):
             return bltns.__build_class__(func, name, *bases, **kwds)
         return bltns.__build_class__(func, name, *bases, Enum, **kwds)
 
 
-enum = _EnumClassBuilder()
+enum = _EnumClassMaker()
 
 
 class ReprEnum(Enum):
