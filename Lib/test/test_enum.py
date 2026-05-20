@@ -1073,6 +1073,30 @@ class _FlagTests:
 class TestPlainEnumClass(_EnumTests, _PlainOutputTests, unittest.TestCase):
     enum_type = Enum
 
+    def test_enum_maker(self):
+        ns = {}
+        exec("""\
+from enum import enum, Enum
+
+make enum Color:
+    RED = 1
+    BLUE = 2
+
+make enum Label(str):
+    RED = 'red'
+
+make enum Explicit(Enum):
+    RED = 1
+""", ns)
+        Color = ns["Color"]
+        Label = ns["Label"]
+        Explicit = ns["Explicit"]
+        self.assertEqual(Color.RED.value, 1)
+        self.assertEqual(Color.BLUE.value, 2)
+        self.assertEqual(list(Color), [Color.RED, Color.BLUE])
+        self.assertIsInstance(Label.RED, str)
+        self.assertIs(Explicit.RED.__class__.__mro__[1], Enum)
+
 
 class TestPlainEnumFunction(_EnumTests, _PlainOutputTests, unittest.TestCase):
     enum_type = Enum

@@ -1662,7 +1662,8 @@ symtable_add_def(struct symtable *st, PyObject *name, int flag,
 static int
 symtable_enter_type_param_block(struct symtable *st, identifier name,
                                void *ast, int has_defaults, int has_kwdefaults,
-                               enum _stmt_kind kind, _Py_SourceLocation loc)
+                               int has_class_maker, enum _stmt_kind kind,
+                               _Py_SourceLocation loc)
 {
     _Py_block_ty current_type = st->st_cur->ste_type;
     if(!symtable_enter_block(st, name, TypeParametersBlock, ast, loc)) {
@@ -1675,6 +1676,17 @@ symtable_enter_type_param_block(struct symtable *st, identifier name,
         }
     }
     if (kind == ClassDef_kind) {
+        if (has_class_maker) {
+            PyObject *maker = PyUnicode_InternFromString(".maker");
+            if (maker == NULL) {
+                return 0;
+            }
+            int result = symtable_add_def(st, maker, DEF_PARAM, loc);
+            Py_DECREF(maker);
+            if (!result) {
+                return 0;
+            }
+        }
         _Py_DECLARE_STR(type_params, ".type_params");
         // It gets "set" when we create the type params tuple and
         // "used" when we build up the bases.
@@ -1907,7 +1919,7 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
                     s->v.FunctionDef.args->defaults != NULL,
                     has_kwonlydefaults(s->v.FunctionDef.args->kwonlyargs,
                                        s->v.FunctionDef.args->kw_defaults),
-                    s->kind,
+                    false, s->kind,
                     LOCATION(s))) {
                 return 0;
             }
@@ -1949,11 +1961,16 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
             return 0;
         if (s->v.ClassDef.decorator_list)
             VISIT_SEQ(st, expr, s->v.ClassDef.decorator_list);
+        if (s->v.ClassDef.maker) {
+            VISIT(st, expr, s->v.ClassDef.maker);
+        }
         tmp = st->st_private;
         if (asdl_seq_LEN(s->v.ClassDef.type_params) > 0) {
             if (!symtable_enter_type_param_block(st, s->v.ClassDef.name,
                                                 (void *)s->v.ClassDef.type_params,
-                                                false, false, s->kind,
+                                                false, false,
+                                                s->v.ClassDef.maker != NULL,
+                                                s->kind,
                                                 LOCATION(s))) {
                 return 0;
             }
@@ -2010,7 +2027,7 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
             if (!symtable_enter_type_param_block(
                     st, name,
                     (void *)s->v.TypeAlias.type_params,
-                    false, false, s->kind,
+                    false, false, false, s->kind,
                     LOCATION(s))) {
                 return 0;
             }
@@ -2292,7 +2309,7 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
                     s->v.AsyncFunctionDef.args->defaults != NULL,
                     has_kwonlydefaults(s->v.AsyncFunctionDef.args->kwonlyargs,
                                        s->v.AsyncFunctionDef.args->kw_defaults),
-                    s->kind,
+                    false, s->kind,
                     LOCATION(s))) {
                 return 0;
             }

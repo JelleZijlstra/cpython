@@ -223,6 +223,7 @@ struct _stmt {
             asdl_stmt_seq *body;
             asdl_expr_seq *decorator_list;
             asdl_type_param_seq *type_params;
+            expr_ty maker;
         } ClassDef;
 
         struct {
@@ -713,8 +714,8 @@ stmt_ty _PyAST_AsyncFunctionDef(identifier name, arguments_ty args,
 stmt_ty _PyAST_ClassDef(identifier name, asdl_expr_seq * bases,
                         asdl_keyword_seq * keywords, asdl_stmt_seq * body,
                         asdl_expr_seq * decorator_list, asdl_type_param_seq *
-                        type_params, int lineno, int col_offset, int
-                        end_lineno, int end_col_offset, PyArena *arena);
+                        type_params, expr_ty maker, int lineno, int col_offset,
+                        int end_lineno, int end_col_offset, PyArena *arena);
 stmt_ty _PyAST_Return(expr_ty value, int lineno, int col_offset, int
                       end_lineno, int end_col_offset, PyArena *arena);
 stmt_ty _PyAST_Delete(asdl_expr_seq * targets, int lineno, int col_offset, int

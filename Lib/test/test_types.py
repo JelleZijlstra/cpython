@@ -42,7 +42,7 @@ class TypesTests(unittest.TestCase):
 
     def test_names(self):
         c_only_names = {'CapsuleType', 'LazyImportType'}
-        ignored = {'new_class', 'resolve_bases', 'prepare_class',
+        ignored = {'new_class', 'exec_class_body', 'resolve_bases', 'prepare_class',
                    'get_original_bases', 'DynamicClassAttribute', 'coroutine'}
 
         for name in c_types.__all__:
@@ -1456,6 +1456,26 @@ class ClassCreationTests(unittest.TestCase):
         self.assertEqual(C.x, 0)
         self.assertEqual(C.y, 1)
         self.assertEqual(C.z, 2)
+
+    def test_exec_class_body(self):
+        class Builder:
+            def __build_class__(self, func, name, *bases, **kwds):
+                def exec_body(ns):
+                    types.exec_class_body(func, ns)
+                    ns["extra"] = 42
+                return types.new_class(name, bases, kwds, exec_body)
+
+        maker = Builder()
+
+        make maker C:
+            x = 1
+
+            def get_class(self):
+                return __class__
+
+        self.assertEqual(C.x, 1)
+        self.assertEqual(C.extra, 42)
+        self.assertIs(C().get_class(), C)
 
     def test_new_class_metaclass_keywords(self):
         #Test that keywords are passed to the metaclass:

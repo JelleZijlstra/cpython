@@ -67,6 +67,46 @@ class TestCase(unittest.TestCase):
         o = C(42)
         self.assertEqual(o.x, 42)
 
+    def test_dataclass_maker(self):
+        make dataclass C:
+            x: int
+            y: int = 5
+
+        self.assertTrue(is_dataclass(C))
+        self.assertEqual(C(42), C(x=42, y=5))
+
+    def test_dataclass_maker_options(self):
+        make dataclass C(frozen=True):
+            x: int
+
+        with self.assertRaises(FrozenInstanceError):
+            C(42).x = 5
+
+    def test_dataclass_maker_type_params(self):
+        make dataclass C[T]:
+            x: T
+
+        self.assertTrue(is_dataclass(C))
+        self.assertEqual(C.__type_params__[0].__name__, "T")
+        self.assertEqual(C(42).x, 42)
+
+    def test_dataclass_maker_slots(self):
+        owners = []
+
+        class Descriptor:
+            def __set_name__(self, owner, name):
+                owners.append(owner)
+
+        make dataclass C(slots=True):
+            x: int
+            y: int = 5
+            marker = Descriptor()
+
+        self.assertIs(owners[0], C)
+        self.assertEqual(C.__slots__, ('x', 'y'))
+        self.assertEqual(C(42), C(x=42, y=5))
+        self.assertNotHasAttr(C(42), '__dict__')
+
     def test_field_default_default_factory_error(self):
         msg = "cannot specify both default and default_factory"
         with self.assertRaisesRegex(ValueError, msg):

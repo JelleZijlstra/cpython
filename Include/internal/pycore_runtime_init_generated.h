@@ -1454,6 +1454,7 @@ extern "C" {
     INIT_ID(__lshift__), \
     INIT_ID(__lt__), \
     INIT_ID(__main__), \
+    INIT_ID(__make__), \
     INIT_ID(__match_args__), \
     INIT_ID(__matmul__), \
     INIT_ID(__missing__), \

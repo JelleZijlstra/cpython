@@ -1816,6 +1816,10 @@ class TestKeywordTypoSuggestions(unittest.TestCase):
         ("[123 fur x\nin range(3)\nif x]", "for"),
         ("for x im n:\n  pass", "in"),
     ]
+    RUNTIME_TYPO_CASES = [
+        ("make classe MyClass:\n  pass", "Did you mean: 'class'"),
+        ("make lamda x:\n  x ** 2", "Did you mean: 'lambda'"),
+    ]
 
     def test_keyword_suggestions_from_file(self):
         with tempfile.TemporaryDirectory() as script_dir:
@@ -1826,6 +1830,13 @@ class TestKeywordTypoSuggestions(unittest.TestCase):
                     rc, stdout, stderr = assert_python_failure(script_name)
                     stderr_text = stderr.decode('utf-8')
                     self.assertIn(f"Did you mean '{expected_kw}'", stderr_text)
+            for i, (code, expected) in enumerate(self.RUNTIME_TYPO_CASES):
+                with self.subTest(typo=expected):
+                    source = textwrap.dedent(code).strip()
+                    script_name = make_script(script_dir, f"runtime_script_{i}", source)
+                    rc, stdout, stderr = assert_python_failure(script_name)
+                    stderr_text = stderr.decode('utf-8')
+                    self.assertIn(expected, stderr_text)
 
     def test_keyword_suggestions_from_command_string(self):
         for code, expected_kw in self.TYPO_CASES:
@@ -1834,6 +1845,12 @@ class TestKeywordTypoSuggestions(unittest.TestCase):
                 rc, stdout, stderr = assert_python_failure('-c', source)
                 stderr_text = stderr.decode('utf-8')
                 self.assertIn(f"Did you mean '{expected_kw}'", stderr_text)
+        for code, expected in self.RUNTIME_TYPO_CASES:
+            with self.subTest(typo=expected):
+                source = textwrap.dedent(code).strip()
+                rc, stdout, stderr = assert_python_failure('-c', source)
+                stderr_text = stderr.decode('utf-8')
+                self.assertIn(expected, stderr_text)
 
     def test_no_keyword_suggestion_for_comma_errors(self):
         # When the parser identifies a missing comma, don't suggest
@@ -5093,6 +5110,32 @@ class SuggestionFormattingTestBase(SuggestionFormattingTestMixin):
 
         actual = self.get_suggestion(func)
         self.assertIn("forget to import '_io'", actual)
+
+    def test_name_error_for_class_maker_keyword_typos(self):
+        def func():
+            source = "make classe MyClass:\n    pass"
+            filename = "<class-maker-keyword-typo-test>"
+            linecache.cache[filename] = (
+                len(source), None, source.splitlines(True), filename)
+            exec(compile(source, filename, "exec"))
+
+        actual = self.get_suggestion(func)
+        self.assertIn("Did you mean: 'class'?", actual)
+
+    def test_name_error_for_class_maker_soft_keywords(self):
+        def func():
+            source = "make case match: ..."
+            filename = "<class-maker-soft-keyword-test>"
+            linecache.cache[filename] = (
+                len(source), None, source.splitlines(True), filename)
+            exec(compile(source, filename, "exec"))
+
+        actual = self.get_suggestion(func)
+        self.assertIn(
+            "Did you mean to use a 'case' pattern inside a 'match' statement?",
+            actual,
+        )
+        self.assertNotIn("'False'", actual)
 
 
 

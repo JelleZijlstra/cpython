@@ -20,7 +20,8 @@ module Python
              keyword* keywords,
              stmt* body,
              expr* decorator_list,
-             type_param* type_params)
+             type_param* type_params,
+             expr? maker)
           | Return(expr? value)
 
           | Delete(expr* targets)

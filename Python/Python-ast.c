@@ -240,6 +240,7 @@ void _PyAST_Fini(PyInterpreterState *interp)
     Py_CLEAR(state->level);
     Py_CLEAR(state->lineno);
     Py_CLEAR(state->lower);
+    Py_CLEAR(state->maker);
     Py_CLEAR(state->match_case_type);
     Py_CLEAR(state->mod_type);
     Py_CLEAR(state->module);
@@ -345,6 +346,7 @@ static int init_identifiers(struct ast_state *state)
     if ((state->level = PyUnicode_InternFromString("level")) == NULL) return -1;
     if ((state->lineno = PyUnicode_InternFromString("lineno")) == NULL) return -1;
     if ((state->lower = PyUnicode_InternFromString("lower")) == NULL) return -1;
+    if ((state->maker = PyUnicode_InternFromString("maker")) == NULL) return -1;
     if ((state->module = PyUnicode_InternFromString("module")) == NULL) return -1;
     if ((state->msg = PyUnicode_InternFromString("msg")) == NULL) return -1;
     if ((state->name = PyUnicode_InternFromString("name")) == NULL) return -1;
@@ -442,6 +444,7 @@ static const char * const ClassDef_fields[]={
     "body",
     "decorator_list",
     "type_params",
+    "maker",
 };
 static const char * const Return_fields[]={
     "value",
@@ -1281,6 +1284,21 @@ add_ast_annotations(struct ast_state *state)
         }
         cond = PyDict_SetItemString(ClassDef_annotations, "type_params", type)
                                     == 0;
+        Py_DECREF(type);
+        if (!cond) {
+            Py_DECREF(ClassDef_annotations);
+            return 0;
+        }
+    }
+    {
+        PyObject *type = state->expr_type;
+        type = _Py_union_type_or(type, Py_None);
+        cond = type != NULL;
+        if (!cond) {
+            Py_DECREF(ClassDef_annotations);
+            return 0;
+        }
+        cond = PyDict_SetItemString(ClassDef_annotations, "maker", type) == 0;
         Py_DECREF(type);
         if (!cond) {
             Py_DECREF(ClassDef_annotations);
@@ -6152,7 +6170,7 @@ init_types(void *arg)
     state->stmt_type = make_type(state, "stmt", state->AST_type, NULL, 0,
         "stmt = FunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment, type_param* type_params)\n"
         "     | AsyncFunctionDef(identifier name, arguments args, stmt* body, expr* decorator_list, expr? returns, string? type_comment, type_param* type_params)\n"
-        "     | ClassDef(identifier name, expr* bases, keyword* keywords, stmt* body, expr* decorator_list, type_param* type_params)\n"
+        "     | ClassDef(identifier name, expr* bases, keyword* keywords, stmt* body, expr* decorator_list, type_param* type_params, expr? maker)\n"
         "     | Return(expr? value)\n"
         "     | Delete(expr* targets)\n"
         "     | Assign(expr* targets, expr value, string? type_comment)\n"
@@ -6209,9 +6227,11 @@ init_types(void *arg)
         Py_None) == -1)
         return -1;
     state->ClassDef_type = make_type(state, "ClassDef", state->stmt_type,
-                                     ClassDef_fields, 6,
-        "ClassDef(identifier name, expr* bases, keyword* keywords, stmt* body, expr* decorator_list, type_param* type_params)");
+                                     ClassDef_fields, 7,
+        "ClassDef(identifier name, expr* bases, keyword* keywords, stmt* body, expr* decorator_list, type_param* type_params, expr? maker)");
     if (!state->ClassDef_type) return -1;
+    if (PyObject_SetAttr(state->ClassDef_type, state->maker, Py_None) == -1)
+        return -1;
     state->Return_type = make_type(state, "Return", state->stmt_type,
                                    Return_fields, 1,
         "Return(expr? value)");
@@ -7128,8 +7148,9 @@ _PyAST_AsyncFunctionDef(identifier name, arguments_ty args, asdl_stmt_seq *
 stmt_ty
 _PyAST_ClassDef(identifier name, asdl_expr_seq * bases, asdl_keyword_seq *
                 keywords, asdl_stmt_seq * body, asdl_expr_seq * decorator_list,
-                asdl_type_param_seq * type_params, int lineno, int col_offset,
-                int end_lineno, int end_col_offset, PyArena *arena)
+                asdl_type_param_seq * type_params, expr_ty maker, int lineno,
+                int col_offset, int end_lineno, int end_col_offset, PyArena
+                *arena)
 {
     stmt_ty p;
     if (!name) {
@@ -7147,6 +7168,7 @@ _PyAST_ClassDef(identifier name, asdl_expr_seq * bases, asdl_keyword_seq *
     p->v.ClassDef.body = body;
     p->v.ClassDef.decorator_list = decorator_list;
     p->v.ClassDef.type_params = type_params;
+    p->v.ClassDef.maker = maker;
     p->lineno = lineno;
     p->col_offset = col_offset;
     p->end_lineno = end_lineno;
@@ -9067,6 +9089,11 @@ ast2obj_stmt(struct ast_state *state, void* _o)
                              ast2obj_type_param);
         if (!value) goto failed;
         if (PyObject_SetAttr(result, state->type_params, value) == -1)
+            goto failed;
+        Py_DECREF(value);
+        value = ast2obj_expr(state, o->v.ClassDef.maker);
+        if (!value) goto failed;
+        if (PyObject_SetAttr(result, state->maker, value) == -1)
             goto failed;
         Py_DECREF(value);
         break;
@@ -11612,6 +11639,7 @@ obj2ast_stmt(struct ast_state *state, PyObject* obj, stmt_ty* out, PyArena*
         asdl_stmt_seq* body;
         asdl_expr_seq* decorator_list;
         asdl_type_param_seq* type_params;
+        expr_ty maker;
 
         if (PyObject_GetOptionalAttr(obj, state->name, &tmp) < 0) {
             return -1;
@@ -11820,9 +11848,26 @@ obj2ast_stmt(struct ast_state *state, PyObject* obj, stmt_ty* out, PyArena*
             }
             Py_CLEAR(tmp);
         }
+        if (PyObject_GetOptionalAttr(obj, state->maker, &tmp) < 0) {
+            return -1;
+        }
+        if (tmp == NULL || tmp == Py_None) {
+            Py_CLEAR(tmp);
+            maker = NULL;
+        }
+        else {
+            int res;
+            if (_Py_EnterRecursiveCall(" while traversing 'ClassDef' node")) {
+                goto failed;
+            }
+            res = obj2ast_expr(state, tmp, &maker, arena);
+            _Py_LeaveRecursiveCall();
+            if (res != 0) goto failed;
+            Py_CLEAR(tmp);
+        }
         *out = _PyAST_ClassDef(name, bases, keywords, body, decorator_list,
-                               type_params, lineno, col_offset, end_lineno,
-                               end_col_offset, arena);
+                               type_params, maker, lineno, col_offset,
+                               end_lineno, end_col_offset, arena);
         if (*out == NULL) goto failed;
         return 0;
     }

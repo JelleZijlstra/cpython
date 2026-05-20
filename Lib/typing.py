@@ -19,6 +19,7 @@ that may be changed without notice. Use at your own risk!
 """
 
 from abc import abstractmethod, ABCMeta
+import builtins
 import collections
 from collections import defaultdict
 import collections.abc
@@ -109,7 +110,9 @@ __all__ = [
     'OrderedDict',
     'Set',
     'FrozenSet',
+    'namedtuple',
     'NamedTuple',  # Not really a type.
+    'typeddict',
     'TypedDict',  # Not really a type.
     'Generator',
 
@@ -149,6 +152,7 @@ __all__ = [
     'override',
     'ParamSpecArgs',
     'ParamSpecKwargs',
+    'protocol',
     'ReadOnly',
     'Required',
     'reveal_type',
@@ -3389,6 +3393,24 @@ def TypedDict(typename, fields, /, *, total=True, closed=None,
 
 _TypedDict = type.__new__(_TypedDictMeta, 'TypedDict', (), {})
 TypedDict.__mro_entries__ = lambda bases: (_TypedDict,)
+
+
+class _ClassMaker:
+    def __init__(self, default_bases, *, append_default=False):
+        self._default_bases = default_bases
+        self._append_default = append_default
+
+    def __make__(self, func, name, *bases, **kwds):
+        if self._append_default:
+            bases = (*bases, *self._default_bases)
+        elif not bases:
+            bases = self._default_bases
+        return builtins.__build_class__(func, name, *bases, **kwds)
+
+
+protocol = _ClassMaker((Protocol,), append_default=True)
+typeddict = _ClassMaker((TypedDict,), append_default=True)
+namedtuple = _ClassMaker((NamedTuple,))
 
 
 @_SpecialForm
